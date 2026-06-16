@@ -18,6 +18,18 @@ import type {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const getAuthRequestErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    if (error.message === "Failed to fetch") {
+      return "Cannot reach Supabase. Check VITE_SUPABASE_URL in code/.env and make sure the Supabase project is still active.";
+    }
+
+    return error.message;
+  }
+
+  return "Authentication request failed.";
+};
+
 const readProfile = async (user: User): Promise<Profile | null> => {
   const supabase = getSupabaseClient();
 
@@ -125,17 +137,23 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
 
     setError(null);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: input.email,
-      password: input.password
-    });
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: input.email,
+        password: input.password
+      });
 
-    if (signInError) {
-      setError(signInError.message);
-      return { error: signInError.message };
+      if (signInError) {
+        setError(signInError.message);
+        return { error: signInError.message };
+      }
+
+      return { error: null };
+    } catch (requestError) {
+      const message = getAuthRequestErrorMessage(requestError);
+      setError(message);
+      return { error: message };
     }
-
-    return { error: null };
   };
 
   const signUp = async (input: SignUpInput) => {
@@ -147,24 +165,30 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
     setError(null);
     const redirectTo = `${window.location.origin}/feed`;
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: input.email,
-      password: input.password,
-      options: {
-        emailRedirectTo: redirectTo,
-        data: {
-          full_name: input.fullName,
-          role: input.role
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: input.email,
+        password: input.password,
+        options: {
+          emailRedirectTo: redirectTo,
+          data: {
+            full_name: input.fullName,
+            role: input.role
+          }
         }
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        return { error: signUpError.message };
       }
-    });
 
-    if (signUpError) {
-      setError(signUpError.message);
-      return { error: signUpError.message };
+      return { error: null };
+    } catch (requestError) {
+      const message = getAuthRequestErrorMessage(requestError);
+      setError(message);
+      return { error: message };
     }
-
-    return { error: null };
   };
 
   const signOut = async () => {

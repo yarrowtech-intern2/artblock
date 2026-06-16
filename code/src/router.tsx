@@ -1,76 +1,52 @@
 import { createBrowserRouter } from "react-router-dom";
+import { lazyRoute } from "./lib/lazyRoute";
 import { AppShell } from "./shell/AppShell";
 import { ProtectedLayout } from "./shell/ProtectedLayout";
+import { RouteErrorPage } from "./views/RouteErrorPage";
 
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
+    errorElement: <RouteErrorPage />,
     children: [
       {
         path: "/",
-        lazy: async () => {
-          const { HomePage } = await import("./views/HomePage");
-          return { Component: HomePage };
-        }
+        lazy: lazyRoute(() => import("./views/HomePage"), "HomePage")
       },
       {
         path: "/login",
-        lazy: async () => {
-          const { LoginPage } = await import("./views/LoginPage");
-          return { Component: LoginPage };
-        }
+        lazy: lazyRoute(() => import("./views/LoginPage"), "LoginPage")
       },
       {
         path: "/signup",
-        lazy: async () => {
-          const { SignupPage } = await import("./views/SignupPage");
-          return { Component: SignupPage };
-        }
+        lazy: lazyRoute(() => import("./views/SignupPage"), "SignupPage")
       },
       {
         path: "/creators/:slug",
-        lazy: async () => {
-          const { PublicProfilePage } = await import("./views/PublicProfilePage");
-          return { Component: PublicProfilePage };
-        }
+        lazy: lazyRoute(() => import("./views/PublicProfilePage"), "PublicProfilePage")
       },
       {
         path: "/profiles/:id",
-        lazy: async () => {
-          const { PublicProfilePage } = await import("./views/PublicProfilePage");
-          return { Component: PublicProfilePage };
-        }
+        lazy: lazyRoute(() => import("./views/PublicProfilePage"), "PublicProfilePage")
       },
       {
         element: <ProtectedLayout />,
         children: [
           {
             path: "/feed",
-            lazy: async () => {
-              const { FeedPage } = await import("./views/FeedPage");
-              return { Component: FeedPage };
-            }
+            lazy: lazyRoute(() => import("./views/FeedPage"), "FeedPage")
           },
           {
             path: "/dashboard",
-            lazy: async () => {
-              const { DashboardPage } = await import("./views/DashboardPage");
-              return { Component: DashboardPage };
-            }
+            lazy: lazyRoute(() => import("./views/DashboardPage"), "DashboardPage")
           },
           {
             path: "/messages",
-            lazy: async () => {
-              const { MessagesPage } = await import("./views/MessagesPage");
-              return { Component: MessagesPage };
-            }
+            lazy: lazyRoute(() => import("./views/MessagesPage"), "MessagesPage")
           },
           {
             path: "/notifications",
-            lazy: async () => {
-              const { NotificationsPage } = await import("./views/NotificationsPage");
-              return { Component: NotificationsPage };
-            }
+            lazy: lazyRoute(() => import("./views/NotificationsPage"), "NotificationsPage")
           }
         ]
       }
@@ -78,9 +54,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "*",
-    lazy: async () => {
-      const { NotFoundPage } = await import("./views/NotFoundPage");
-      return { Component: NotFoundPage };
-    }
+    errorElement: <RouteErrorPage />,
+    lazy: lazyRoute(() => import("./views/NotFoundPage"), "NotFoundPage")
   }
 ]);

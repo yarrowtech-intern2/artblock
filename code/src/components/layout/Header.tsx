@@ -8,8 +8,8 @@ import {
 import { getSupabaseClient } from "../../lib/supabase";
 import { useAuth } from "../../providers/AuthProvider";
 import { useTheme } from "../../providers/ThemeProvider";
-import logoBlack from "../../public/logo/logo-black.png";
-import logoWhite from "../../public/logo/logo-white.png";
+import logoBlack from "../../public/logo/logo-black-transparent.png";
+import logoWhite from "../../public/logo/logo-white-transparent.png";
 
 const marketingAnchorLinks = [
   { label: "About", href: "#about" },
@@ -35,7 +35,8 @@ export const Header = () => {
   const location = useLocation();
   const homeTarget = status === "authenticated" ? "/feed" : "/";
   const isAuthed = status === "authenticated";
-  const isLanding = !isAuthed && location.pathname === "/";
+  const isLanding =
+    !isAuthed && (location.pathname === "/" || location.pathname === "/nehome");
   const { theme } = useTheme();
   const brandLogo = theme === "light" ? logoBlack : logoWhite;
 

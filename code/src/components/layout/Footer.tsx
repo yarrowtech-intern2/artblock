@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useTheme } from "../../providers/ThemeProvider";
-import logoBlack from "../../public/logo/logo-black.png";
-import logoWhite from "../../public/logo/logo-white.png";
+import logoBlack from "../../public/logo/logo-black-transparent.png";
+import logoWhite from "../../public/logo/logo-white-transparent.png";
 
 export const Footer = () => {
   const { theme } = useTheme();

@@ -8,15 +8,16 @@ export const AppShell = () => {
   const { status } = useAuth();
   const location = useLocation();
   const isAuthed = status === "authenticated";
-  const isLandingRoute = location.pathname === "/";
+  const isLandingRoute = location.pathname === "/" || location.pathname === "/nehome";
+  const isNewHomeRoute = location.pathname === "/nehome";
 
   return (
     <div className={`app-frame${isAuthed ? " app-frame--authed" : ""}`}>
-      <Header />
+      {!isNewHomeRoute ? <Header /> : null}
       <main className={`page-shell${isLandingRoute ? " page-shell--landing" : ""}`}>
         <Outlet />
       </main>
-      {isAuthed ? <BottomNav /> : <Footer />}
+      {isNewHomeRoute ? null : isAuthed ? <BottomNav /> : <Footer />}
     </div>
   );
 };

@@ -3,8 +3,6 @@ import type { FormEvent, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import artisticIndianLadyHeroImage from "../../public/images/lumora-indian-lady-artistic.png";
 import indianLadyHeroImage from "../../public/images/lumora-indian-lady.png";
-import logoBlack from "../../public/logo/logo-black-transparent.png";
-import logoWhite from "../../public/logo/logo-white-transparent.png";
 
 const baseHeroImage = indianLadyHeroImage;
 const revealHeroImage = artisticIndianLadyHeroImage;
@@ -28,20 +26,20 @@ const partnerNames = ["Kaido", "Northpeak", "Vellum", "Orbit", "Brightline", "Co
 
 const desktopNavItems = [
   { label: "Home", type: "scroll" as const, target: "lumora-home" },
-  { label: "Work", type: "scroll" as const, target: "works" },
-  { label: "Services", type: "scroll" as const, target: "works" },
-  { label: "Studio", type: "scroll" as const, target: "lumora-home" },
+  { label: "Work", type: "scroll" as const, target: "programs" },
+  { label: "Services", type: "scroll" as const, target: "facilities" },
+  { label: "Studio", type: "scroll" as const, target: "testimonials" },
   { label: "Careers", type: "modal" as const },
-  { label: "Contact", type: "modal" as const }
+  { label: "Contact", type: "scroll" as const, target: "contact" }
 ];
 
 const menuItems = [
   { index: "01", label: "Home", type: "scroll" as const, target: "lumora-home" },
-  { index: "02", label: "Work", type: "scroll" as const, target: "works" },
-  { index: "03", label: "Services", type: "scroll" as const, target: "works" },
-  { index: "04", label: "Studio", type: "scroll" as const, target: "lumora-home" },
+  { index: "02", label: "Work", type: "scroll" as const, target: "programs" },
+  { index: "03", label: "Services", type: "scroll" as const, target: "facilities" },
+  { index: "04", label: "Studio", type: "scroll" as const, target: "testimonials" },
   { index: "05", label: "Careers", type: "modal" as const },
-  { index: "06", label: "Contact", type: "modal" as const }
+  { index: "06", label: "Contact", type: "scroll" as const, target: "contact" }
 ];
 
 const monthNames = [
@@ -69,6 +67,21 @@ const formatClock = (date: Date) => {
     time: `${displayHour}:${String(minutes).padStart(2, "0")}${period}`,
     date: `${date.getDate()} ${monthNames[date.getMonth()]}, ${date.getFullYear()}`
   };
+};
+
+const drawCoverImage = (
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  width: number,
+  height: number
+) => {
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  const offsetX = (width - drawWidth) / 2;
+  const offsetY = (height - drawHeight) / 2;
+
+  context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
 };
 
 const ArrowRightIcon = ({ className }: { className?: string }) => (
@@ -108,6 +121,21 @@ const CircleDotIcon = () => (
   </svg>
 );
 
+const BrandMarkIcon = ({ className }: { className?: string }) => (
+  <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 48 42">
+    <path
+      d="M3.5 38.5C11.2 33.7 17.7 25.9 21.2 16C22.3 12.8 23.1 9.5 23.8 5.2C24.2 2.9 24.3 2.8 24.6 4.8C26.5 17.6 34.1 29.4 44.8 38.5C33.4 33.6 15.1 33.6 3.5 38.5Z"
+      fill="currentColor"
+    />
+    <path
+      d="M14.8 17.6C16.8 18.6 19 19 21.4 19C24.5 19 27.1 18.3 30 16.6"
+      stroke="#ffffff"
+      strokeLinecap="round"
+      strokeWidth="2"
+    />
+  </svg>
+);
+
 type PillButtonProps = {
   children: ReactNode;
   icon?: "right" | "up-right";
@@ -142,11 +170,10 @@ const BrandLogo = ({
   className?: string;
   tone: "dark" | "light";
 }) => (
-  <img
-    alt="ArtBlock"
-    className={className}
-    src={tone === "dark" ? logoBlack : logoWhite}
-  />
+  <span className={`${className ?? ""} lumora-brand__lockup lumora-brand__lockup--${tone}`.trim()}>
+    <BrandMarkIcon className="lumora-brand__mark" />
+    <span className="lumora-brand__text">Artblock</span>
+  </span>
 );
 
 export const LumoraHeroSection = () => {
@@ -154,6 +181,7 @@ export const LumoraHeroSection = () => {
   const [clock, setClock] = useState({ time: "9:41am", date: "12 March, 2025" });
   const [isReady, setReady] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [headerLogoTone, setHeaderLogoTone] = useState<"dark" | "light">("dark");
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setSubmitting] = useState(false);
@@ -166,7 +194,9 @@ export const LumoraHeroSection = () => {
     project: ""
   });
   const heroRef = useRef<HTMLElement | null>(null);
+  const baseImageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const headerLogoRef = useRef<HTMLButtonElement | null>(null);
   const formResetTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -243,6 +273,19 @@ export const LumoraHeroSection = () => {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [menuOpen, modalOpen]);
+
+  useEffect(() => {
+    const openContactModal = () => {
+      setMenuOpen(false);
+      setModalOpen(true);
+    };
+
+    window.addEventListener("lumora:open-contact", openContactModal);
+
+    return () => {
+      window.removeEventListener("lumora:open-contact", openContactModal);
+    };
+  }, []);
 
   useEffect(() => {
     const host = heroRef.current;
@@ -447,6 +490,106 @@ export const LumoraHeroSection = () => {
   }, [pointerFine, reduceMotion]);
 
   useEffect(() => {
+    const host = heroRef.current;
+    const logo = headerLogoRef.current;
+    const baseImage = baseImageRef.current;
+    const revealCanvas = canvasRef.current;
+
+    if (!host || !logo || !baseImage || !revealCanvas) {
+      return undefined;
+    }
+
+    const scratchCanvas = document.createElement("canvas");
+    const scratchContext = scratchCanvas.getContext("2d", { willReadFrequently: true });
+
+    if (!scratchContext) {
+      return undefined;
+    }
+
+    let frameId = 0;
+
+    const updateLogoTone = () => {
+      const hostRect = host.getBoundingClientRect();
+      const logoRect = logo.getBoundingClientRect();
+
+      if (hostRect.width <= 0 || hostRect.height <= 0 || baseImage.naturalWidth <= 0 || baseImage.naturalHeight <= 0) {
+        return;
+      }
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(Math.round(hostRect.width * dpr), 1);
+      const height = Math.max(Math.round(hostRect.height * dpr), 1);
+
+      scratchCanvas.width = width;
+      scratchCanvas.height = height;
+      scratchContext.clearRect(0, 0, width, height);
+      drawCoverImage(scratchContext, baseImage, width, height);
+
+      if (revealCanvas.width > 0 && revealCanvas.height > 0) {
+        scratchContext.drawImage(revealCanvas, 0, 0, width, height);
+      }
+
+      let totalLuminance = 0;
+      let samples = 0;
+
+      for (let row = 0; row < 4; row += 1) {
+        for (let column = 0; column < 6; column += 1) {
+          const sampleX = logoRect.left - hostRect.left + logoRect.width * (0.16 + column * 0.136);
+          const sampleY = logoRect.top - hostRect.top + logoRect.height * (0.22 + row * 0.18);
+          const pixelX = Math.min(Math.max(Math.round(sampleX * dpr), 0), width - 1);
+          const pixelY = Math.min(Math.max(Math.round(sampleY * dpr), 0), height - 1);
+          const pixel = scratchContext.getImageData(pixelX, pixelY, 1, 1).data;
+
+          totalLuminance += 0.2126 * pixel[0] + 0.7152 * pixel[1] + 0.0722 * pixel[2];
+          samples += 1;
+        }
+      }
+
+      const averageLuminance = samples > 0 ? totalLuminance / samples : 255;
+      setHeaderLogoTone(averageLuminance > 154 ? "dark" : "light");
+    };
+
+    const scheduleUpdate = () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(updateLogoTone);
+    };
+
+    const handleImageLoad = () => {
+      scheduleUpdate();
+    };
+
+    if (baseImage.complete) {
+      scheduleUpdate();
+    } else {
+      baseImage.addEventListener("load", handleImageLoad);
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      scheduleUpdate();
+    });
+
+    resizeObserver.observe(host);
+    resizeObserver.observe(logo);
+    host.addEventListener("pointermove", scheduleUpdate, { passive: true });
+    host.addEventListener("pointerleave", scheduleUpdate);
+    window.addEventListener("resize", scheduleUpdate);
+
+    return () => {
+      if (!baseImage.complete) {
+        baseImage.removeEventListener("load", handleImageLoad);
+      }
+      resizeObserver.disconnect();
+      host.removeEventListener("pointermove", scheduleUpdate);
+      host.removeEventListener("pointerleave", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [isReady, pointerFine, reduceMotion]);
+
+  useEffect(() => {
     return () => {
       if (formResetTimeoutRef.current !== null) {
         window.clearTimeout(formResetTimeoutRef.current);
@@ -507,7 +650,7 @@ export const LumoraHeroSection = () => {
     <>
       <section className="lumora-hero" id="lumora-home" ref={heroRef}>
         <div className="lumora-hero__media">
-          <img alt="" className="lumora-hero__base-image" src={baseHeroImage} />
+          <img alt="" className="lumora-hero__base-image" ref={baseImageRef} src={baseHeroImage} />
           <canvas aria-hidden="true" className="lumora-hero__reveal-canvas" ref={canvasRef} />
         </div>
         <div aria-hidden="true" className="lumora-hero__vignette" />
@@ -515,8 +658,13 @@ export const LumoraHeroSection = () => {
 
         <header className={`lumora-hero__header${isReady ? " is-visible" : ""}`}>
           <div className="lumora-shell lumora-hero__header-shell">
-            <button className="lumora-brand" onClick={() => scrollToId("lumora-home")} type="button">
-              <BrandLogo className="lumora-brand__image" tone="dark" />
+            <button
+              className="lumora-brand lumora-brand--header"
+              onClick={() => scrollToId("lumora-home")}
+              ref={headerLogoRef}
+              type="button"
+            >
+              <BrandLogo className="lumora-brand__image" tone={headerLogoTone} />
             </button>
 
             <nav aria-label="Primary" className="lumora-nav">
@@ -569,7 +717,7 @@ export const LumoraHeroSection = () => {
               </div>
 
               <h1 className={`lumora-hero__title${isReady ? " is-visible" : ""}`}>
-                {["Bold ideas,", "shipped with", "quiet precision"].map((line, index) => (
+                {["Creativity,", "that brings", "brands together"].map((line, index) => (
                   <span
                     className="lumora-hero__title-line"
                     key={line}

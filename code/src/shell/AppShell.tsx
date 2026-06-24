@@ -8,16 +8,22 @@ export const AppShell = () => {
   const { status } = useAuth();
   const location = useLocation();
   const isAuthed = status === "authenticated";
-  const isLandingRoute = location.pathname === "/" || location.pathname === "/nehome";
-  const isNewHomeRoute = location.pathname === "/nehome";
+  const isLandingRoute =
+    location.pathname === "/" || location.pathname === "/classic-home";
+  const isChromelessLanding = location.pathname === "/";
+  const hasSharedHeader = !isChromelessLanding;
 
   return (
-    <div className={`app-frame${isAuthed ? " app-frame--authed" : ""}`}>
-      {!isNewHomeRoute ? <Header /> : null}
+    <div
+      className={`app-frame${isAuthed ? " app-frame--authed" : ""}${
+        hasSharedHeader ? " app-frame--with-header" : ""
+      }`}
+    >
+      {hasSharedHeader ? <Header /> : null}
       <main className={`page-shell${isLandingRoute ? " page-shell--landing" : ""}`}>
         <Outlet />
       </main>
-      {isNewHomeRoute ? null : isAuthed ? <BottomNav /> : <Footer />}
+      {isChromelessLanding ? null : isAuthed ? <BottomNav /> : <Footer />}
     </div>
   );
 };

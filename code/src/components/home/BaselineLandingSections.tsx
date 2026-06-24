@@ -104,36 +104,6 @@ const testimonials = [
   }
 ];
 
-const footerColumns = [
-  {
-    title: "Creators",
-    links: [
-      { label: "Artist Profiles", href: "#junior" },
-      { label: "Creator Earnings", href: "#performance" },
-      { label: "Post Formats", href: "#adult" },
-      { label: "Studio Tools", href: "#private" }
-    ]
-  },
-  {
-    title: "Fans",
-    links: [
-      { label: "Tipping", href: "#membership" },
-      { label: "Follows", href: "#facilities" },
-      { label: "Polls", href: "#testimonials" },
-      { label: "Fan Clubs", href: "#shop" }
-    ]
-  },
-  {
-    title: "Platform",
-    links: [
-      { label: "About", href: "#about" },
-      { label: "Safety", href: "#programs" },
-      { label: "Careers", href: "#careers" },
-      { label: "Contact", href: "#contact" }
-    ]
-  }
-];
-
 const socials = [
   { label: "Instagram", href: "#instagram" },
   { label: "X", href: "#x" },
@@ -141,9 +111,10 @@ const socials = [
   { label: "LinkedIn", href: "#linkedin" }
 ];
 
-const legalLinks = [
-  { label: "Privacy", href: "#privacy" },
-  { label: "Terms", href: "#terms" }
+const footerPrimaryLinks = [
+  { label: "Home", href: "#lumora-home" },
+  { label: "About", href: "#about" },
+  { label: "Creator journeys", href: "#programs" }
 ];
 
 const ArrowIcon = ({ reverse = false }: { reverse?: boolean }) => (
@@ -169,6 +140,13 @@ const TennisBallIcon = () => (
     <path d="M19.2 5.6a9 9 0 0 1 0 12.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
   </svg>
 );
+
+const getFooterTime = () =>
+  new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  }).format(new Date());
 
 const Eyebrow = ({ children, tone = "dark" }: { children: string; tone?: "dark" | "light" }) => (
   <div className={`baseline-eyebrow baseline-eyebrow--${tone}`}>
@@ -273,28 +251,10 @@ const ArrowButton = ({
   </button>
 );
 
-const PillButton = ({
-  children,
-  onClick,
-  tone = "light"
-}: {
-  children: string;
-  onClick?: () => void;
-  tone?: "light" | "solid" | "outline";
-}) => (
-  <button
-    className={`baseline-pill-button baseline-pill-button--${tone}`}
-    onClick={onClick}
-    type="button"
-  >
-    <span>{children}</span>
-    <ArrowIcon />
-  </button>
-);
-
 export const BaselineLandingSections = () => {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [trustIndex, setTrustIndex] = useState(0);
+  const [footerTime, setFooterTime] = useState(getFooterTime());
 
   useEffect(() => {
     const root = rootRef.current;
@@ -337,6 +297,16 @@ export const BaselineLandingSections = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setFooterTime(getFooterTime());
+    }, 30000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const openContactModal = () => {
     window.dispatchEvent(new Event("lumora:open-contact"));
   };
@@ -346,7 +316,7 @@ export const BaselineLandingSections = () => {
 
   return (
     <div className="baseline-page" ref={rootRef}>
-      <section className="baseline-trust baseline-anchor-section" id="creator-proof">
+      <section className="baseline-trust baseline-anchor-section" id="about">
         <div className="baseline-trust__top">
           <div className="baseline-trust__percent baseline-reveal baseline-reveal--scale" data-reveal>
             <strong>100%</strong>
@@ -564,52 +534,8 @@ export const BaselineLandingSections = () => {
         <span className="baseline-hidden-anchor" id="privacy" />
         <span className="baseline-hidden-anchor" id="terms" />
 
-        <div className="baseline-footer__cta">
-          <div>
-            <Eyebrow tone="light">Get started</Eyebrow>
-            <StackedLines as="p" className="baseline-footer__title" lines={["Ready to", "launch?"]} />
-          </div>
-
-          <div className="baseline-reveal" data-reveal style={revealDelayStyle(150)}>
-            <PillButton onClick={openContactModal}>Start Your Profile</PillButton>
-          </div>
-        </div>
-
-        <div className="baseline-footer__grid">
-          <div className="baseline-footer__brand">
-            <div className="baseline-footer__brand-mark">
-              <TennisBallIcon />
-              <span>ArtBlock</span>
-            </div>
-            <p>
-              A creator platform where standout art meets loyal fans, support,
-              and community.
-            </p>
-            <address>
-              <a href="mailto:support@artblock.com">support@artblock.com</a>
-              <a href="tel:+12125550148">+1 (212) 555-0148</a>
-              <span>For artists, online worldwide</span>
-            </address>
-          </div>
-
-          {footerColumns.map((column) => (
-            <nav className="baseline-footer__nav" key={column.title}>
-              <h3>{column.title}</h3>
-              <ul>
-                {column.links.map((link) => (
-                  <li key={link.label}>
-                    <a href={link.href}>{link.label}</a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
-        </div>
-
-        <div className="baseline-footer__bottom">
-          <span>© 2026 ArtBlock Creator Platform. All rights reserved.</span>
-
-          <nav className="baseline-footer__bottom-nav" aria-label="Social links">
+        <div className="baseline-footer__top">
+          <nav className="baseline-footer__socials" aria-label="Social links">
             {socials.map((item) => (
               <a href={item.href} key={item.label}>
                 {item.label}
@@ -617,13 +543,47 @@ export const BaselineLandingSections = () => {
             ))}
           </nav>
 
-          <nav className="baseline-footer__bottom-nav" aria-label="Legal links">
-            {legalLinks.map((item) => (
-              <a href={item.href} key={item.label}>
-                {item.label}
-              </a>
-            ))}
+          <a className="baseline-footer__mail" href="mailto:support@artblock.com">
+            support@artblock.com
+          </a>
+        </div>
+
+        <div className="baseline-footer__mid">
+          <div className="baseline-footer__brand-mark">
+            <TennisBallIcon />
+            <span>ArtBlock</span>
+          </div>
+
+          <nav className="baseline-footer__nav" aria-label="Footer navigation">
+            <ul>
+              {footerPrimaryLinks.map((link) => (
+                <li key={link.label}>
+                  <a href={link.href}>{link.label}</a>
+                </li>
+              ))}
+              <li>
+                <button onClick={openContactModal} type="button">
+                  Contact
+                </button>
+              </li>
+            </ul>
           </nav>
+
+          <p className="baseline-footer__summary">
+            A creator platform where standout art meets loyal fans, support, and community.
+          </p>
+        </div>
+
+        <div className="baseline-footer__hero">
+          <button className="baseline-footer__headline" onClick={openContactModal} type="button">
+            Get in Touch
+          </button>
+        </div>
+
+        <div className="baseline-footer__bottom">
+          <span>ArtBlock Creator Platform (c) 2026</span>
+
+          <span>Online worldwide {footerTime}</span>
         </div>
       </footer>
     </div>

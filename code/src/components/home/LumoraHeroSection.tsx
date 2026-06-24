@@ -24,22 +24,19 @@ const heroSlides = [
 
 const partnerNames = ["Kaido", "Northpeak", "Vellum", "Orbit", "Brightline", "Cobalt", "Mesa"];
 
-const desktopNavItems = [
-  { label: "Home", type: "scroll" as const, target: "lumora-home" },
-  { label: "Work", type: "scroll" as const, target: "programs" },
-  { label: "Services", type: "scroll" as const, target: "facilities" },
-  { label: "Studio", type: "scroll" as const, target: "testimonials" },
-  { label: "Careers", type: "modal" as const },
-  { label: "Contact", type: "scroll" as const, target: "contact" }
-];
+type NavigationItem = {
+  index: string;
+  label: string;
+  path?: string;
+  target?: string;
+  type: "scroll" | "modal" | "route";
+};
 
-const menuItems = [
-  { index: "01", label: "Home", type: "scroll" as const, target: "lumora-home" },
-  { index: "02", label: "Work", type: "scroll" as const, target: "programs" },
-  { index: "03", label: "Services", type: "scroll" as const, target: "facilities" },
-  { index: "04", label: "Studio", type: "scroll" as const, target: "testimonials" },
-  { index: "05", label: "Careers", type: "modal" as const },
-  { index: "06", label: "Contact", type: "scroll" as const, target: "contact" }
+const navigationItems: NavigationItem[] = [
+  { index: "01", label: "Home", type: "scroll", target: "lumora-home" },
+  { index: "02", label: "About us", type: "scroll", target: "about" },
+  { index: "03", label: "Contact us", type: "modal" },
+  { index: "04", label: "Login", type: "route", path: "/login" }
 ];
 
 const monthNames = [
@@ -182,6 +179,8 @@ export const LumoraHeroSection = () => {
   const [isReady, setReady] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
   const [headerLogoTone, setHeaderLogoTone] = useState<"dark" | "light">("dark");
+  const [headerNavTone, setHeaderNavTone] = useState<"dark" | "light">("dark");
+  const [headerOnLightSections, setHeaderOnLightSections] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setSubmitting] = useState(false);
@@ -197,6 +196,7 @@ export const LumoraHeroSection = () => {
   const baseImageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const headerLogoRef = useRef<HTMLButtonElement | null>(null);
+  const headerNavRef = useRef<HTMLElement | null>(null);
   const formResetTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -491,11 +491,40 @@ export const LumoraHeroSection = () => {
 
   useEffect(() => {
     const host = heroRef.current;
+
+    if (!host) {
+      return undefined;
+    }
+
+    const updateHeaderSectionState = () => {
+      const heroBottom = host.getBoundingClientRect().bottom;
+      setHeaderOnLightSections(heroBottom <= 120);
+    };
+
+    updateHeaderSectionState();
+    window.addEventListener("scroll", updateHeaderSectionState, { passive: true });
+    window.addEventListener("resize", updateHeaderSectionState);
+
+    return () => {
+      window.removeEventListener("scroll", updateHeaderSectionState);
+      window.removeEventListener("resize", updateHeaderSectionState);
+    };
+  }, []);
+
+  useEffect(() => {
+    const host = heroRef.current;
     const logo = headerLogoRef.current;
+    const nav = headerNavRef.current;
     const baseImage = baseImageRef.current;
     const revealCanvas = canvasRef.current;
 
-    if (!host || !logo || !baseImage || !revealCanvas) {
+    if (!host || !logo || !nav || !baseImage || !revealCanvas) {
+      return undefined;
+    }
+
+    if (headerOnLightSections) {
+      setHeaderLogoTone("dark");
+      setHeaderNavTone("dark");
       return undefined;
     }
 
@@ -508,12 +537,11 @@ export const LumoraHeroSection = () => {
 
     let frameId = 0;
 
-    const updateLogoTone = () => {
+    const getToneFromRect = (targetRect: DOMRect) => {
       const hostRect = host.getBoundingClientRect();
-      const logoRect = logo.getBoundingClientRect();
 
       if (hostRect.width <= 0 || hostRect.height <= 0 || baseImage.naturalWidth <= 0 || baseImage.naturalHeight <= 0) {
-        return;
+        return "dark" as const;
       }
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -534,8 +562,8 @@ export const LumoraHeroSection = () => {
 
       for (let row = 0; row < 4; row += 1) {
         for (let column = 0; column < 6; column += 1) {
-          const sampleX = logoRect.left - hostRect.left + logoRect.width * (0.16 + column * 0.136);
-          const sampleY = logoRect.top - hostRect.top + logoRect.height * (0.22 + row * 0.18);
+          const sampleX = targetRect.left - hostRect.left + targetRect.width * (0.16 + column * 0.136);
+          const sampleY = targetRect.top - hostRect.top + targetRect.height * (0.22 + row * 0.18);
           const pixelX = Math.min(Math.max(Math.round(sampleX * dpr), 0), width - 1);
           const pixelY = Math.min(Math.max(Math.round(sampleY * dpr), 0), height - 1);
           const pixel = scratchContext.getImageData(pixelX, pixelY, 1, 1).data;
@@ -546,7 +574,12 @@ export const LumoraHeroSection = () => {
       }
 
       const averageLuminance = samples > 0 ? totalLuminance / samples : 255;
-      setHeaderLogoTone(averageLuminance > 154 ? "dark" : "light");
+      return averageLuminance > 154 ? ("dark" as const) : ("light" as const);
+    };
+
+    const updateHeaderTone = () => {
+      setHeaderLogoTone(getToneFromRect(logo.getBoundingClientRect()));
+      setHeaderNavTone(getToneFromRect(nav.getBoundingClientRect()));
     };
 
     const scheduleUpdate = () => {
@@ -554,7 +587,7 @@ export const LumoraHeroSection = () => {
         window.cancelAnimationFrame(frameId);
       }
 
-      frameId = window.requestAnimationFrame(updateLogoTone);
+      frameId = window.requestAnimationFrame(updateHeaderTone);
     };
 
     const handleImageLoad = () => {
@@ -573,6 +606,7 @@ export const LumoraHeroSection = () => {
 
     resizeObserver.observe(host);
     resizeObserver.observe(logo);
+    resizeObserver.observe(nav);
     host.addEventListener("pointermove", scheduleUpdate, { passive: true });
     host.addEventListener("pointerleave", scheduleUpdate);
     window.addEventListener("resize", scheduleUpdate);
@@ -587,7 +621,7 @@ export const LumoraHeroSection = () => {
       window.removeEventListener("resize", scheduleUpdate);
       window.cancelAnimationFrame(frameId);
     };
-  }, [isReady, pointerFine, reduceMotion]);
+  }, [headerOnLightSections, isReady, pointerFine, reduceMotion]);
 
   useEffect(() => {
     return () => {
@@ -607,10 +641,16 @@ export const LumoraHeroSection = () => {
     element.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const handleNavAction = (item: { type: "scroll" | "modal"; target?: string }) => {
+  const handleNavAction = (item: NavigationItem) => {
     if (item.type === "modal") {
       setMenuOpen(false);
       setModalOpen(true);
+      return;
+    }
+
+    if (item.type === "route" && item.path) {
+      setMenuOpen(false);
+      navigate(item.path);
       return;
     }
 
@@ -656,7 +696,11 @@ export const LumoraHeroSection = () => {
         <div aria-hidden="true" className="lumora-hero__vignette" />
         <div className={`lumora-hero__watermark${isReady ? " is-visible" : ""}`}>ARTBLOCK</div>
 
-        <header className={`lumora-hero__header${isReady ? " is-visible" : ""}`}>
+        <header
+          className={`lumora-hero__header${isReady ? " is-visible" : ""}${
+            headerOnLightSections ? " lumora-hero__header--scrolled" : ""
+          }`}
+        >
           <div className="lumora-shell lumora-hero__header-shell">
             <button
               className="lumora-brand lumora-brand--header"
@@ -667,31 +711,27 @@ export const LumoraHeroSection = () => {
               <BrandLogo className="lumora-brand__image" tone={headerLogoTone} />
             </button>
 
-            <nav aria-label="Primary" className="lumora-nav">
-              <ul className="lumora-nav__list">
-                {desktopNavItems.map((item) => (
-                  <li key={item.label}>
-                    <button
-                      aria-current={item.label === "Home" ? "page" : undefined}
-                      className="lumora-nav__button"
-                      onClick={() => handleNavAction(item)}
-                      type="button"
-                    >
-                      <span>{item.label}</span>
-                      {item.label === "Services" ? <span className="lumora-nav__caret">▾</span> : null}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-
             <div className="lumora-hero__header-actions">
-              <div className="lumora-clock-chip">
-                <span className="lumora-clock-chip__label">Local time</span>
-                <span className="lumora-clock-chip__value">{clock.time}</span>
-                <span className="lumora-clock-chip__separator">•</span>
-                <span className="lumora-clock-chip__value">{clock.date}</span>
-              </div>
+              <nav
+                aria-label="Primary"
+                className={`lumora-nav lumora-nav--${headerNavTone}`}
+                ref={headerNavRef}
+              >
+                <ul className="lumora-nav__list">
+                  {navigationItems.map((item) => (
+                    <li key={item.label}>
+                      <button
+                        aria-current={item.label === "Home" ? "page" : undefined}
+                        className="lumora-nav__button"
+                        onClick={() => handleNavAction(item)}
+                        type="button"
+                      >
+                        <span>{item.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
 
               <button
                 aria-expanded={menuOpen}
@@ -711,11 +751,6 @@ export const LumoraHeroSection = () => {
         <div className="lumora-shell lumora-hero__content-shell">
           <div className="lumora-hero__content-grid">
             <div className="lumora-hero__copy">
-              <div className={`lumora-hero__eyebrow lumora-reveal lumora-reveal--eyebrow${isReady ? " is-visible" : ""}`}>
-                <span className="lumora-hero__eyebrow-dot" />
-                <span>Independent Studio</span>
-              </div>
-
               <h1 className={`lumora-hero__title${isReady ? " is-visible" : ""}`}>
                 {["Creativity,", "that brings", "brands together"].map((line, index) => (
                   <span
@@ -738,7 +773,7 @@ export const LumoraHeroSection = () => {
               </div>
 
               <div className={`lumora-hero__cta-row lumora-reveal${isReady ? " is-visible" : ""}`} style={{ transitionDelay: "750ms" }}>
-                <PillButton icon="up-right" onClick={() => navigate("/login")} tone="dark">
+                <PillButton icon="up-right" onClick={() => navigate("/signup")} tone="dark">
                   Get started
                 </PillButton>
                 <PillButton icon="right" onClick={() => setModalOpen(true)} tone="outline">
@@ -816,7 +851,6 @@ export const LumoraHeroSection = () => {
         <div className={`lumora-hero__status lumora-reveal${isReady ? " is-visible" : ""}`} style={{ transitionDelay: "900ms" }}>
           <div className="lumora-shell lumora-hero__status-shell">
             <span>Working since 2014</span>
-            <span className="lumora-hero__status-center">Remote-first, worldwide</span>
             <span className="lumora-hero__status-right">Scroll to explore ↓</span>
           </div>
         </div>
@@ -836,7 +870,7 @@ export const LumoraHeroSection = () => {
 
           <div className="lumora-shell lumora-menu-overlay__content">
             <ul className="lumora-menu-overlay__list">
-              {menuItems.map((item, index) => (
+              {navigationItems.map((item, index) => (
                 <li
                   className="lumora-menu-overlay__item"
                   key={item.label}
@@ -852,7 +886,7 @@ export const LumoraHeroSection = () => {
           </div>
 
           <div className="lumora-shell lumora-menu-overlay__footer">
-            <span>Local time — {clock.time}</span>
+            <span>Local time • {clock.time}</span>
             <button
               className="lumora-menu-overlay__cta"
               onClick={() => {
@@ -861,7 +895,7 @@ export const LumoraHeroSection = () => {
               }}
               type="button"
             >
-              Start a project →
+              Contact us →
             </button>
           </div>
         </div>
@@ -892,9 +926,12 @@ export const LumoraHeroSection = () => {
                 <div className="lumora-request-modal__heading">
                   <div className="lumora-request-modal__eyebrow">
                     <span className="lumora-request-modal__dot" />
-                    <span>Start a project</span>
+                    <span>Contact us</span>
                   </div>
-                  <h2>Tell us what you&apos;re building.</h2>
+                  <h2>Let&apos;s start a conversation.</h2>
+                  <p>
+                    Share your idea, question, or collaboration plan. We&apos;ll reply with a clear next step.
+                  </p>
                 </div>
 
                 <form className="lumora-request-modal__form" onSubmit={handleSubmit}>
@@ -925,12 +962,12 @@ export const LumoraHeroSection = () => {
                   </label>
 
                   <label>
-                    <span>Project</span>
+                    <span>Message</span>
                     <textarea
                       onChange={(event) =>
                         setFormState((current) => ({ ...current, project: event.target.value }))
                       }
-                      placeholder="A few words about your project, timeline, and budget."
+                      placeholder="Tell us what you need help with."
                       required
                       rows={4}
                       value={formState.project}
@@ -938,9 +975,9 @@ export const LumoraHeroSection = () => {
                   </label>
 
                   <div className="lumora-request-modal__footer">
-                    <p>We reply within one business day.</p>
+                    <p>We usually reply within one business day.</p>
                     <PillButton icon="up-right" tone="dark" type="submit">
-                      {isSubmitting ? "Sending…" : "Send request"}
+                      {isSubmitting ? "Sending..." : "Send message"}
                     </PillButton>
                   </div>
                 </form>
@@ -950,9 +987,9 @@ export const LumoraHeroSection = () => {
                 <div className="lumora-request-modal__success-mark">
                   <BrandLogo className="lumora-request-modal__success-logo" tone="light" />
                 </div>
-                <h2>Request received</h2>
+                <h2>Message received</h2>
                 <p>
-                  Thanks for reaching out — we&apos;ll get back to you within one business
+                  Thanks for reaching out - we&apos;ll get back to you within one business
                   day.
                 </p>
                 <PillButton onClick={closeModal} tone="dark">

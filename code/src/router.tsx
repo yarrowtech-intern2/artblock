@@ -11,11 +11,11 @@ export const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        lazy: lazyRoute(() => import("./views/HomePage"), "HomePage")
+        lazy: lazyRoute(() => import("./views/NewHomePage"), "NewHomePage")
       },
       {
-        path: "/nehome",
-        lazy: lazyRoute(() => import("./views/NewHomePage"), "NewHomePage")
+        path: "/classic-home",
+        lazy: lazyRoute(() => import("./views/HomePage"), "HomePage")
       },
       {
         path: "/login",

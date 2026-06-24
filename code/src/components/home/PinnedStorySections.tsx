@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useRef } from "react";
 
 type StoryGlyph = {
   title: string;
@@ -13,6 +13,8 @@ type StoryPanel = {
   glyphs: StoryGlyph[];
   ghostLabel: string;
 };
+
+const StoryPanelShaderBackground = lazy(() => import("./StoryPanelShaderBackground"));
 
 const storyPanels: StoryPanel[] = [
   {
@@ -152,6 +154,11 @@ export const PinnedStorySections = () => {
             className={`new-home-story__panel new-home-story__panel--${panel.theme}`}
             key={panel.id}
           >
+            {panel.theme === "blue" || panel.theme === "violet" ? (
+              <Suspense fallback={<div aria-hidden="true" className="new-home-story__shader-bg" />}>
+                <StoryPanelShaderBackground variant={panel.theme} />
+              </Suspense>
+            ) : null}
             <div className="new-home-story__ambient" aria-hidden="true" />
             <div className="new-home-story__mesh" aria-hidden="true" />
 
@@ -197,49 +204,106 @@ export const PinnedStorySections = () => {
 const AlponaPattern = () => (
   <svg className="new-home-story__pattern-svg" fill="none" viewBox="0 0 960 960">
     <g className="new-home-story__pattern-stroke">
-      <circle cx="480" cy="480" r="112" />
-      <circle cx="480" cy="480" r="176" />
-      <circle cx="480" cy="480" r="244" />
-      <circle cx="480" cy="480" r="308" />
-      <path d="M480 116c28 48 58 78 102 102-44 24-74 54-102 102-28-48-58-78-102-102 44-24 74-54 102-102Z" />
-      <path d="M844 480c-48 28-78 58-102 102-24-44-54-74-102-102 48-28 78-58 102-102 24 44 54 74 102 102Z" />
-      <path d="M480 844c-28-48-58-78-102-102 44-24 74-54 102-102 28 48 58 78 102 102-44 24-74 54-102 102Z" />
-      <path d="M116 480c48-28 78-58 102-102 24 44 54 74 102 102-48 28-78 58-102 102-24-44-54-74-102-102Z" />
-      <path d="M480 44v116" />
-      <path d="M480 800v116" />
-      <path d="M44 480h116" />
-      <path d="M800 480h116" />
-      <path d="M240 240c35 10 64 25 90 51-26 26-55 41-90 51-10-35-25-64-51-90 26-26 41-55 51-90Z" />
-      <path d="M720 240c10 35 25 64 51 90-26 26-41 55-51 90-35-10-64-25-90-51 26-26 55-41 90-51Z" />
-      <path d="M240 720c35-10 64-25 90-51 26 26 55 41 90 51-35 10-64 25-90 51-26-26-55-41-90-51Z" />
-      <path d="M720 720c-35-10-64-25-90-51-26 26-55 41-90 51 35 10 64 25 90 51 26-26 55-41 90-51Z" />
-      <path d="M292 166c22 38 48 62 84 82-36 20-62 46-84 84-20-38-46-64-84-84 38-20 64-44 84-82Z" />
-      <path d="M668 166c20 38 46 62 84 82-38 20-64 46-84 84-22-38-48-64-84-84 36-20 62-44 84-82Z" />
-      <path d="M292 794c22-38 48-62 84-82-36-20-62-46-84-84-20 38-46 64-84 84 38 20 64 44 84 82Z" />
-      <path d="M668 794c20-38 46-62 84-82-38-20-64-46-84-84-22 38-48 64-84 84 36 20 62 44 84 82Z" />
-      <path d="M480 204c44 64 92 104 160 138-68 34-116 74-160 138-44-64-92-104-160-138 68-34 116-74 160-138Z" />
-      <path d="M756 480c-64 44-104 92-138 160-34-68-74-116-138-160 64-44 104-92 138-160 34 68 74 116 138 160Z" />
-      <path d="M480 756c-44-64-92-104-160-138 68-34 116-74 160-138 44 64 92 104 160 138-68 34-116 74-160 138Z" />
-      <path d="M204 480c64-44 104-92 138-160 34 68 74 116 138 160-64 44-104 92-138 160-34-68-74-116-138-160Z" />
+      {/* Central lotus bloom */}
+      <circle cx="480" cy="480" r="56" />
+      <circle cx="480" cy="480" r="108" />
+      <circle cx="480" cy="480" r="172" />
+      <circle cx="480" cy="480" r="252" />
+      <circle cx="480" cy="480" r="340" />
+      <circle cx="480" cy="480" r="420" />
+
+      {/* Petal arcs — 8-fold symmetry (like traditional alpona) */}
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+        <g key={angle} transform={`rotate(${angle} 480 480)`}>
+          {/* Large outer petal */}
+          <path d="M480 60 C520 200, 580 300, 480 370 C380 300, 440 200, 480 60Z" />
+          {/* Inner petal (smaller, nested) */}
+          <path d="M480 170 C508 260, 540 310, 480 360 C420 310, 452 260, 480 170Z" />
+          {/* Curving vine tendril */}
+          <path d="M480 108 Q540 220, 510 340" />
+          <path d="M480 108 Q420 220, 450 340" />
+          {/* Small teardrop near rim */}
+          <path d="M480 430 Q495 445, 480 460 Q465 445, 480 430Z" />
+        </g>
+      ))}
+
+      {/* Paisley swirls at diagonals */}
+      {[45, 135, 225, 315].map((angle) => (
+        <g key={`paisley-${angle}`} transform={`rotate(${angle} 480 480)`}>
+          <path d="M480 90 C530 130, 540 190, 500 220 C460 250, 420 220, 430 180 C440 150, 460 130, 480 90Z" />
+          <path d="M480 130 C510 155, 515 185, 498 200" />
+        </g>
+      ))}
+
+      {/* Connecting scallop arcs between cardinal petals */}
+      <path d="M310 170 Q370 210, 310 260" />
+      <path d="M650 170 Q590 210, 650 260" />
+      <path d="M310 700 Q370 750, 310 800" />
+      <path d="M650 700 Q590 750, 650 800" />
+      <path d="M170 310 Q210 370, 170 430" />
+      <path d="M170 530 Q210 590, 170 650" />
+      <path d="M790 310 Q750 370, 790 430" />
+      <path d="M790 530 Q750 590, 790 650" />
+
+      {/* Outer ring scallops */}
+      {Array.from({ length: 24 }).map((_, i) => {
+        const a = (i * 15 * Math.PI) / 180;
+        const r1 = 410;
+        const r2 = 440;
+        const cx1 = 480 + Math.cos(a - 0.12) * r1;
+        const cy1 = 480 + Math.sin(a - 0.12) * r1;
+        const cx2 = 480 + Math.cos(a + 0.12) * r1;
+        const cy2 = 480 + Math.sin(a + 0.12) * r1;
+        const mx = 480 + Math.cos(a) * r2;
+        const my = 480 + Math.sin(a) * r2;
+        return (
+          <path
+            key={`scallop-${i}`}
+            d={`M${cx1.toFixed(1)} ${cy1.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${cx2.toFixed(1)} ${cy2.toFixed(1)}`}
+          />
+        );
+      })}
     </g>
+
     <g className="new-home-story__pattern-fill">
-      <circle cx="480" cy="480" r="18" />
-      <circle cx="480" cy="132" r="10" />
-      <circle cx="828" cy="480" r="10" />
-      <circle cx="480" cy="828" r="10" />
-      <circle cx="132" cy="480" r="10" />
-      <circle cx="244" cy="244" r="9" />
-      <circle cx="716" cy="244" r="9" />
-      <circle cx="716" cy="716" r="9" />
-      <circle cx="244" cy="716" r="9" />
-      <circle cx="480" cy="256" r="9" />
-      <circle cx="704" cy="480" r="9" />
-      <circle cx="480" cy="704" r="9" />
-      <circle cx="256" cy="480" r="9" />
-      <circle cx="332" cy="332" r="7" />
-      <circle cx="628" cy="332" r="7" />
-      <circle cx="628" cy="628" r="7" />
-      <circle cx="332" cy="628" r="7" />
+      {/* Center jewel */}
+      <circle cx="480" cy="480" r="20" />
+      {/* Cardinal dots */}
+      {[0, 90, 180, 270].map((angle) => {
+        const rad = (angle * Math.PI) / 180;
+        return [108, 252, 380].map((r) => (
+          <circle
+            key={`dot-${angle}-${r}`}
+            cx={480 + Math.cos(rad) * r}
+            cy={480 + Math.sin(rad) * r}
+            r={r > 300 ? 8 : r > 200 ? 10 : 7}
+          />
+        ));
+      })}
+      {/* Diagonal dots */}
+      {[45, 135, 225, 315].map((angle) => {
+        const rad = (angle * Math.PI) / 180;
+        return [140, 280].map((r) => (
+          <circle
+            key={`diag-${angle}-${r}`}
+            cx={480 + Math.cos(rad) * r}
+            cy={480 + Math.sin(rad) * r}
+            r={r > 200 ? 9 : 7}
+          />
+        ));
+      })}
+      {/* Tiny dots on the outermost ring */}
+      {Array.from({ length: 16 }).map((_, i) => {
+        const a = (i * 22.5 * Math.PI) / 180;
+        return (
+          <circle
+            key={`rim-${i}`}
+            cx={480 + Math.cos(a) * 420}
+            cy={480 + Math.sin(a) * 420}
+            r={5}
+          />
+        );
+      })}
     </g>
   </svg>
 );

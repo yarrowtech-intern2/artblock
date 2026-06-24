@@ -36,7 +36,8 @@ export const Header = () => {
   const homeTarget = status === "authenticated" ? "/feed" : "/";
   const isAuthed = status === "authenticated";
   const isLanding =
-    !isAuthed && (location.pathname === "/" || location.pathname === "/nehome");
+    !isAuthed &&
+    (location.pathname === "/" || location.pathname === "/classic-home");
   const { theme } = useTheme();
   const brandLogo = theme === "light" ? logoBlack : logoWhite;
 

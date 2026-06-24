@@ -136,7 +136,9 @@ $$;
 
 grant execute on function public.convert_profile_to_creator(text) to authenticated;
 
-create or replace view public.public_creator_profiles as
+drop view if exists public.public_creator_profiles;
+
+create view public.public_creator_profiles as
 select
   cp.id,
   cp.slug,
@@ -155,7 +157,9 @@ from public.creator_profiles cp
 join public.profiles p on p.id = cp.id
 where cp.is_published = true;
 
-create or replace view public.public_member_profiles as
+drop view if exists public.public_member_profiles;
+
+create view public.public_member_profiles as
 select
   p.id,
   p.full_name,
@@ -197,7 +201,9 @@ left join public.creator_profiles cp
   on cp.id = p.id
   and cp.is_published = true;
 
-create or replace view public.feed_posts as
+drop view if exists public.feed_posts;
+
+create view public.feed_posts as
 select
   p.id,
   p.author_id,
@@ -220,7 +226,9 @@ left join public.creator_profiles cp on cp.id = p.author_id
 where p.is_published = true
 order by p.created_at desc;
 
-create or replace view public.comment_threads as
+drop view if exists public.comment_threads;
+
+create view public.comment_threads as
 select
   c.id,
   c.post_id,
@@ -234,7 +242,9 @@ select
 from public.post_comments c
 join public.profiles p on p.id = c.author_id;
 
-create or replace view public.direct_thread_previews as
+drop view if exists public.direct_thread_previews;
+
+create view public.direct_thread_previews as
 select
   t.id as thread_id,
   peer.id as peer_id,
@@ -277,7 +287,9 @@ where (
   where thread_members.thread_id = t.id
 ) = 2;
 
-create or replace view public.direct_message_entries as
+drop view if exists public.direct_message_entries;
+
+create view public.direct_message_entries as
 select
   dm.id,
   dm.thread_id,
@@ -297,7 +309,9 @@ where exists (
     and members.user_id = auth.uid()
 );
 
-create or replace view public.notification_items as
+drop view if exists public.notification_items;
+
+create view public.notification_items as
 select
   n.id,
   n.recipient_id,

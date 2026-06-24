@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
 
 const ARTIST_VERIFICATION_AMOUNT_PAISE = 49900;
 const ARTIST_VERIFICATION_CURRENCY = "INR";
@@ -9,6 +8,11 @@ const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID") ?? "";
 const razorpayKeySecret = Deno.env.get("RAZORPAY_KEY_SECRET") ?? "";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+};
 
 const jsonResponse = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), {

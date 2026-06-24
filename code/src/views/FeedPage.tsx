@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { PostComposer } from "../components/dashboard/PostComposer";
 import { FeedCard } from "../components/feed/FeedCard";
+import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { fetchFeedPosts, type FeedScope } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
 import type { FeedPost } from "../types/auth";
@@ -123,7 +124,10 @@ export const FeedPage = () => {
         <aside className="feed-sidebar feed-sidebar--left">
           <div className="feed-rail-card">
             <span className="section-heading__eyebrow">Profile</span>
-            <h2>{profile?.full_name ?? "Account"}</h2>
+            <h2 className="profile-name-row">
+              {profile?.full_name ?? "Account"}
+              {profile?.is_verified_artist ? <VerifiedArtistBadge /> : null}
+            </h2>
             <p>{profile?.bio ?? "Set your profile details to improve how you appear across the platform."}</p>
             <div className="feed-rail-meta">
               <span>{profile?.role === "creator" ? "Creator" : "Visitor"}</span>

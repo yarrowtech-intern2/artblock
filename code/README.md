@@ -13,6 +13,7 @@ Production-oriented starter for a mobile-first creator platform using React, Typ
 - Mixed creator feed with image, video, poll, and formatted text posts
 - Visitor interactions with likes, comments, and poll voting
 - Public creator pages at `/creators/:slug`
+- Artist account conversion and Razorpay-backed creator verification
 
 ## Local setup
 
@@ -35,8 +36,24 @@ Production-oriented starter for a mobile-first creator platform using React, Typ
    - [supabase/migrations/20260331_creator_profiles_and_storage.sql](/e:/s15/Projects/artblock-final/code/supabase/migrations/20260331_creator_profiles_and_storage.sql)
    - [supabase/migrations/20260331_feed_posts.sql](/e:/s15/Projects/artblock-final/code/supabase/migrations/20260331_feed_posts.sql)
    - [supabase/migrations/20260331_rich_feed_engagement.sql](/e:/s15/Projects/artblock-final/code/supabase/migrations/20260331_rich_feed_engagement.sql)
+   - [supabase/migrations/20260624_creator_verification_and_payments.sql](/e:/s15/Projects/artblock-final/code/supabase/migrations/20260624_creator_verification_and_payments.sql)
 
-4. Start the app:
+4. Deploy the Supabase Edge Functions and set these function secrets:
+
+   ```bash
+   SUPABASE_URL=...
+   SUPABASE_ANON_KEY=...
+   SUPABASE_SERVICE_ROLE_KEY=...
+   RAZORPAY_KEY_ID=...
+   RAZORPAY_KEY_SECRET=...
+   ```
+
+   Functions added in this repo:
+
+   - `create-artist-verification-order`
+   - `verify-artist-verification-payment`
+
+5. Start the app:
 
    ```bash
    npm run dev

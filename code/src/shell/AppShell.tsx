@@ -9,9 +9,15 @@ export const AppShell = () => {
   const location = useLocation();
   const isAuthed = status === "authenticated";
   const isLandingRoute =
-    location.pathname === "/" || location.pathname === "/classic-home";
-  const isChromelessLanding = location.pathname === "/";
-  const hasSharedHeader = !isChromelessLanding;
+    location.pathname === "/" ||
+    location.pathname === "/classic-home" ||
+    location.pathname === "/login" ||
+    location.pathname === "/signup";
+  const isChromelessRoute =
+    location.pathname === "/" ||
+    location.pathname === "/login" ||
+    location.pathname === "/signup";
+  const hasSharedHeader = !isChromelessRoute;
 
   return (
     <div
@@ -23,7 +29,7 @@ export const AppShell = () => {
       <main className={`page-shell${isLandingRoute ? " page-shell--landing" : ""}`}>
         <Outlet />
       </main>
-      {isChromelessLanding ? null : isAuthed ? <BottomNav /> : <Footer />}
+      {isChromelessRoute ? null : isAuthed ? <BottomNav /> : <Footer />}
     </div>
   );
 };

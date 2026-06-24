@@ -199,6 +199,9 @@ const loadFeaturedCreators = async () => {
     .from("public_member_profiles")
     .select("*")
     .eq("role", "creator")
+    .order("is_verified_artist", { ascending: false })
+    .order("subscriber_count", { ascending: false })
+    .order("follower_count", { ascending: false })
     .limit(8);
 
   if (error) {

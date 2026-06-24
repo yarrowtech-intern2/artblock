@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { CreatorAccessPanel } from "../components/dashboard/CreatorAccessPanel";
 import { Link } from "react-router-dom";
 import { CreatorStudio } from "../components/dashboard/CreatorStudio";
 import { PostComposer } from "../components/dashboard/PostComposer";
 import { ProfileEditor } from "../components/dashboard/ProfileEditor";
 import { fetchOwnCreatorProfile } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
+import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import type { CreatorProfile } from "../types/auth";
 
 export const DashboardPage = () => {
@@ -67,7 +69,10 @@ export const DashboardPage = () => {
       <div className="dashboard-summary">
         <article>
           <span>Role</span>
-          <strong>{profile.role}</strong>
+          <strong className="dashboard-summary__value">
+            {profile.role}
+            {profile.is_verified_artist ? <VerifiedArtistBadge /> : null}
+          </strong>
         </article>
         <article>
           <span>Email</span>
@@ -81,6 +86,12 @@ export const DashboardPage = () => {
 
       <div className="dashboard-stack">
         <ProfileEditor profile={profile} userId={user.id} onProfileSaved={refreshProfile} />
+        <CreatorAccessPanel
+          creatorProfile={creatorProfile}
+          onRefreshCreatorProfile={loadCreatorProfile}
+          onRefreshProfile={refreshProfile}
+          profile={profile}
+        />
 
         {profile.role === "creator" ? (
           <>

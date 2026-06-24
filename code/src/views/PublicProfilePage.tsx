@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FeedCard } from "../components/feed/FeedCard";
+import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import {
   fetchProfilePosts,
   fetchProfileRelationshipState,
@@ -262,7 +263,10 @@ export const PublicProfilePage = () => {
             <span className="section-heading__eyebrow">
               {publicProfile.role === "creator" ? "Creator" : "Member"}
             </span>
-            <h1>{publicProfile.full_name}</h1>
+            <h1 className="profile-name-row">
+              {publicProfile.full_name}
+              {publicProfile.is_verified_artist ? <VerifiedArtistBadge /> : null}
+            </h1>
             <p>
               {publicProfile.headline ??
                 publicProfile.bio ??

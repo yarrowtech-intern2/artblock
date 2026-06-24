@@ -5,6 +5,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead
 } from "../lib/profile";
+import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { getSupabaseClient } from "../lib/supabase";
 import { useAuth } from "../providers/AuthProvider";
 import type { NotificationItem } from "../types/auth";
@@ -161,13 +162,18 @@ export const NotificationsPage = () => {
                   </div>
                 )}
               </div>
-              <div className="notification-card__body">
-                <div className="notification-card__row">
-                  <strong>{item.title}</strong>
-                  <span>{formatDate(item.created_at)}</span>
-                </div>
+                <div className="notification-card__body">
+                  <div className="notification-card__row">
+                    <strong>{item.title}</strong>
+                    <span>{formatDate(item.created_at)}</span>
+                  </div>
                 <p>{item.body}</p>
-                {item.actor_username ? <span>@{item.actor_username}</span> : null}
+                {item.actor_full_name ? (
+                  <span className="notification-card__actor profile-name-row">
+                    {item.actor_username ? `@${item.actor_username}` : item.actor_full_name}
+                    {item.actor_is_verified_artist ? <VerifiedArtistBadge /> : null}
+                  </span>
+                ) : null}
               </div>
             </button>
           ))}

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { addComment, renderFormattedText, togglePostLike, togglePostSave, voteOnPoll } from "../../lib/profile";
 import type { FeedPost } from "../../types/auth";
+import { VerifiedArtistBadge } from "../shared/VerifiedArtistBadge";
 
 type FeedCardProps = {
   post: FeedPost;
@@ -155,7 +156,10 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
             <div className="feed-card__avatar feed-card__avatar--fallback">{initials}</div>
           )}
           <div className="feed-card__identity-text">
-            <strong className="feed-card__name">{post.full_name}</strong>
+            <strong className="feed-card__name">
+              {post.full_name}
+              {post.is_verified_artist ? <VerifiedArtistBadge /> : null}
+            </strong>
             <p className="feed-card__meta">
               {post.username ? `@${post.username}` : "creator"} · {formatDate(post.created_at)}
             </p>
@@ -301,6 +305,7 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
               <article className="feed-comment" key={comment.id}>
                 <Link className="feed-comment__author" to={`/profiles/${comment.author_id}`}>
                   {comment.username ? `@${comment.username}` : comment.full_name}
+                  {comment.author_is_verified_artist ? <VerifiedArtistBadge /> : null}
                 </Link>
                 <span className="feed-comment__body">{comment.body}</span>
               </article>
@@ -311,3 +316,5 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
     </article>
   );
 };
+
+

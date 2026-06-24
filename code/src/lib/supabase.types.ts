@@ -367,6 +367,8 @@ export type Database = {
           email: string;
           full_name: string;
           role: AppRole;
+          is_verified_artist: boolean;
+          verified_artist_at: string | null;
           bio: string | null;
           username: string | null;
           avatar_url: string | null;
@@ -380,6 +382,8 @@ export type Database = {
           email: string;
           full_name: string;
           role: AppRole;
+          is_verified_artist?: boolean;
+          verified_artist_at?: string | null;
           bio?: string | null;
           username?: string | null;
           avatar_url?: string | null;
@@ -393,6 +397,8 @@ export type Database = {
           email?: string;
           full_name?: string;
           role?: AppRole;
+          is_verified_artist?: boolean;
+          verified_artist_at?: string | null;
           bio?: string | null;
           username?: string | null;
           avatar_url?: string | null;
@@ -403,6 +409,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      artist_verification_payments: {
+        Row: {
+          id: string;
+          profile_id: string;
+          razorpay_order_id: string;
+          razorpay_payment_id: string | null;
+          amount_paise: number;
+          currency: string;
+          status: string;
+          metadata: Json;
+          verified_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          razorpay_order_id: string;
+          razorpay_payment_id?: string | null;
+          amount_paise: number;
+          currency?: string;
+          status?: string;
+          metadata?: Json;
+          verified_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          razorpay_order_id?: string;
+          razorpay_payment_id?: string | null;
+          amount_paise?: number;
+          currency?: string;
+          status?: string;
+          metadata?: Json;
+          verified_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "artist_verification_payments_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: {
       public_creator_profiles: {
@@ -410,6 +466,8 @@ export type Database = {
           id: string | null;
           slug: string | null;
           full_name: string | null;
+          is_verified_artist: boolean | null;
+          verified_artist_at: string | null;
           username: string | null;
           avatar_url: string | null;
           bio: string | null;
@@ -424,6 +482,8 @@ export type Database = {
         Row: {
           id: string | null;
           full_name: string | null;
+          is_verified_artist: boolean | null;
+          verified_artist_at: string | null;
           username: string | null;
           avatar_url: string | null;
           bio: string | null;
@@ -452,6 +512,7 @@ export type Database = {
           is_pinned: boolean | null;
           created_at: string | null;
           full_name: string | null;
+          is_verified_artist: boolean | null;
           username: string | null;
           avatar_url: string | null;
           creator_slug: string | null;
@@ -482,6 +543,7 @@ export type Database = {
           created_at: string | null;
           author_id: string | null;
           full_name: string | null;
+          author_is_verified_artist: boolean | null;
           username: string | null;
           avatar_url: string | null;
         };
@@ -491,6 +553,7 @@ export type Database = {
           thread_id: string | null;
           peer_id: string | null;
           peer_full_name: string | null;
+          peer_is_verified_artist: boolean | null;
           peer_username: string | null;
           peer_avatar_url: string | null;
           peer_role: AppRole | null;
@@ -508,6 +571,7 @@ export type Database = {
           body: string | null;
           created_at: string | null;
           full_name: string | null;
+          is_verified_artist: boolean | null;
           username: string | null;
           avatar_url: string | null;
         };
@@ -524,12 +588,22 @@ export type Database = {
           is_read: boolean | null;
           created_at: string | null;
           actor_full_name: string | null;
+          actor_is_verified_artist: boolean | null;
           actor_username: string | null;
           actor_avatar_url: string | null;
         };
       };
     };
     Functions: {
+      convert_profile_to_creator: {
+        Args: {
+          desired_slug?: string | null;
+        };
+        Returns: {
+          role: AppRole;
+          creator_slug: string | null;
+        }[];
+      };
       open_direct_thread: {
         Args: {
           peer_id: string;

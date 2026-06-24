@@ -65,6 +65,8 @@ const mapPublicProfile = (
   return {
     id: row.id,
     full_name: row.full_name,
+    is_verified_artist: Boolean(row.is_verified_artist),
+    verified_artist_at: row.verified_artist_at,
     username: row.username,
     avatar_url: row.avatar_url,
     bio: row.bio,
@@ -100,6 +102,89 @@ export const updateProfile = async (
   const { error } = await supabase.from("profiles").update(payload as never).eq("id", userId);
 
   return { error: error?.message ?? null };
+};
+
+export const convertProfileToCreator = async (desiredSlug?: string | null) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await (supabase.rpc as never as (
+    fn: "convert_profile_to_creator",
+    args: Database["public"]["Functions"]["convert_profile_to_creator"]["Args"]
+  ) => Promise<{
+    data:
+      | Database["public"]["Functions"]["convert_profile_to_creator"]["Returns"]
+      | null;
+    error: { message: string } | null;
+  }>)("convert_profile_to_creator", {
+    desired_slug: desiredSlug ?? null
+  });
+
+  const entry = data?.[0] ?? null;
+
+  return {
+    data: entry,
+    error: error?.message ?? null
+  };
+};
+
+export const createArtistVerificationOrder = async () => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase.functions.invoke("create-artist-verification-order", {
+    body: {}
+  });
+
+  return {
+    data: (data ?? null) as
+      | {
+          orderId: string;
+          amount: number;
+          currency: string;
+          keyId: string;
+          profileName: string;
+        }
+      | null,
+    error:
+      (typeof data === "object" && data && "error" in data && typeof data.error === "string"
+        ? data.error
+        : null) ??
+      error?.message ??
+      null
+  };
+};
+
+export const verifyArtistVerificationPayment = async (input: {
+  orderId: string;
+  paymentId: string;
+  signature: string;
+}) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase.functions.invoke("verify-artist-verification-payment", {
+    body: input
+  });
+
+  return {
+    data: (data ?? null) as { verified: boolean } | null,
+    error:
+      (typeof data === "object" && data && "error" in data && typeof data.error === "string"
+        ? data.error
+        : null) ??
+      error?.message ??
+      null
+  };
 };
 
 export const upsertCreatorProfile = async (
@@ -365,6 +450,7 @@ export const fetchInboxThreads = async () => {
             thread_id: row.thread_id!,
             peer_id: row.peer_id!,
             peer_full_name: row.peer_full_name!,
+            peer_is_verified_artist: Boolean(row.peer_is_verified_artist),
             peer_username: row.peer_username,
             peer_avatar_url: row.peer_avatar_url,
             peer_role: row.peer_role!,
@@ -444,6 +530,7 @@ export const fetchNotifications = async () => {
             is_read: row.is_read!,
             created_at: row.created_at!,
             actor_full_name: row.actor_full_name,
+            actor_is_verified_artist: Boolean(row.actor_is_verified_artist),
             actor_username: row.actor_username,
             actor_avatar_url: row.actor_avatar_url
           }) satisfies NotificationItem
@@ -509,6 +596,7 @@ export const fetchDirectMessages = async (threadId: string) => {
             body: row.body!,
             created_at: row.created_at!,
             full_name: row.full_name!,
+            is_verified_artist: Boolean(row.is_verified_artist),
             username: row.username,
             avatar_url: row.avatar_url
           }) satisfies DirectMessage
@@ -868,6 +956,7 @@ const hydrateFeedPosts = async (
       created_at: row.created_at!,
       is_pinned: Boolean(row.is_pinned),
       full_name: row.full_name!,
+      is_verified_artist: Boolean(row.is_verified_artist),
       username: row.username,
       avatar_url: row.avatar_url,
       creator_slug: row.creator_slug,
@@ -941,6 +1030,7 @@ const hydrateFeedPosts = async (
         created_at: row.created_at!,
         author_id: row.author_id!,
         full_name: row.full_name!,
+        author_is_verified_artist: Boolean(row.author_is_verified_artist),
         username: row.username,
         avatar_url: row.avatar_url
       });

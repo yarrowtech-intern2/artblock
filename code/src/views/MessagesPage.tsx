@@ -6,6 +6,7 @@ import {
   markThreadRead,
   sendDirectMessage
 } from "../lib/profile";
+import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { getSupabaseClient } from "../lib/supabase";
 import { useAuth } from "../providers/AuthProvider";
 import type { DirectMessage, InboxThread } from "../types/auth";
@@ -243,7 +244,10 @@ export const MessagesPage = () => {
                   </div>
                   <div className="messages-thread-card__body">
                     <div className="messages-thread-card__row">
-                      <strong>{thread.peer_username ? `@${thread.peer_username}` : thread.peer_full_name}</strong>
+                      <strong>
+                        {thread.peer_username ? `@${thread.peer_username}` : thread.peer_full_name}
+                        {thread.peer_is_verified_artist ? <VerifiedArtistBadge /> : null}
+                      </strong>
                       <div className="messages-thread-card__meta">
                         {thread.unread_count > 0 ? (
                           <span className="messages-thread-card__badge">
@@ -288,7 +292,10 @@ export const MessagesPage = () => {
                     )}
 
                     <div>
-                      <strong>{activeThread.peer_full_name}</strong>
+                      <strong className="profile-name-row">
+                        {activeThread.peer_full_name}
+                        {activeThread.peer_is_verified_artist ? <VerifiedArtistBadge /> : null}
+                      </strong>
                       <p>
                         {activeThread.peer_username ? `@${activeThread.peer_username}` : activeThread.peer_role}
                       </p>
@@ -321,7 +328,10 @@ export const MessagesPage = () => {
                         className={`message-bubble ${isOwn ? "message-bubble--own" : ""}`}
                         key={message.id}
                       >
-                        <strong>{isOwn ? "You" : message.username ? `@${message.username}` : message.full_name}</strong>
+                        <strong className={!isOwn && message.is_verified_artist ? "profile-name-row" : undefined}>
+                          {isOwn ? "You" : message.username ? `@${message.username}` : message.full_name}
+                          {!isOwn && message.is_verified_artist ? <VerifiedArtistBadge /> : null}
+                        </strong>
                         <p>{message.body}</p>
                         <span>{formatDate(message.created_at)}</span>
                       </article>

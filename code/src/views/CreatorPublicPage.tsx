@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchPublicCreatorProfile } from "../lib/profile";
 import type { PublicCreatorProfile } from "../types/auth";
+import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 
 export const CreatorPublicPage = () => {
   const { slug } = useParams();
@@ -70,7 +71,10 @@ export const CreatorPublicPage = () => {
 
           <div className="public-hero__copy">
             <span className="section-heading__eyebrow">Creator Profile</span>
-            <h1>{creator.full_name}</h1>
+            <h1 className="profile-name-row">
+              {creator.full_name}
+              {creator.is_verified_artist ? <VerifiedArtistBadge /> : null}
+            </h1>
             <p>{creator.headline ?? creator.bio ?? "Independent creator on ArtBlock."}</p>
             <div className="public-meta">
               {creator.username ? <span>@{creator.username}</span> : null}

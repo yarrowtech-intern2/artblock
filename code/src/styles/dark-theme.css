@@ -198,11 +198,36 @@
   border-color: rgba(255, 255, 255, 0.08);
 }
 
+[data-theme="dark"] .auth-route-modal .auth-card,
+[data-theme="amoled"] .auth-route-modal .auth-card {
+  background: #ffffff;
+  border-color: rgba(17, 17, 17, 0.08);
+  color: #111111;
+}
+
 [data-theme="dark"] .auth-form input,
 [data-theme="amoled"] .auth-form input {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: #f2f2f5;
+}
+
+[data-theme="dark"] .auth-route-modal .auth-form input,
+[data-theme="amoled"] .auth-route-modal .auth-form input {
+  background: #ffffff;
+  border-color: rgba(18, 52, 59, 0.14);
+  color: #111111;
+}
+
+[data-theme="dark"] .auth-route-modal .auth-card a,
+[data-theme="dark"] .auth-route-modal .auth-card p,
+[data-theme="dark"] .auth-route-modal .auth-card label,
+[data-theme="dark"] .auth-route-modal .auth-card legend,
+[data-theme="amoled"] .auth-route-modal .auth-card a,
+[data-theme="amoled"] .auth-route-modal .auth-card p,
+[data-theme="amoled"] .auth-route-modal .auth-card label,
+[data-theme="amoled"] .auth-route-modal .auth-card legend {
+  color: inherit;
 }
 
 [data-theme="dark"] .auth-form input::placeholder,
@@ -645,7 +670,7 @@
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(167, 139, 250, 0.4));
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: "Poppins", "Segoe UI", sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
 }
@@ -691,7 +716,7 @@
 
 [data-theme="dark"] .public-stat-item strong,
 [data-theme="amoled"] .public-stat-item strong {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: "Poppins", "Segoe UI", sans-serif;
   font-size: 1.3rem;
   font-weight: 800;
   letter-spacing: -0.03em;

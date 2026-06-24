@@ -173,7 +173,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           emailRedirectTo: redirectTo,
           data: {
             full_name: input.fullName,
-            role: input.role
+            role: input.role,
+            accepted_terms: input.acceptedTerms,
+            accepted_terms_at: input.acceptedTerms ? new Date().toISOString() : null
           }
         }
       });

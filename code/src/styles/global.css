@@ -1,5 +1,5 @@
 :root {
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Poppins", "Segoe UI", sans-serif;
   color: #111111;
   background: #f8f8f7;
   line-height: 1.5;
@@ -2090,8 +2090,96 @@ img {
   place-items: center;
 }
 
+.auth-route-modal-page {
+  position: relative;
+}
+
+.auth-route-modal-page__background {
+  min-height: 100svh;
+}
+
+.auth-route-modal-page__background .landing-page {
+  pointer-events: none;
+  user-select: none;
+}
+
+.auth-route-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+}
+
+.auth-route-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 4, 7, 0.58);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.auth-route-modal__viewport {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: 1.25rem;
+}
+
+.auth-route-modal__panel {
+  position: relative;
+  width: min(100%, 34rem);
+}
+
+.auth-route-modal__panel--signup {
+  width: min(100%, 46rem);
+}
+
+.auth-route-modal__panel--signup .auth-card {
+  width: 100%;
+}
+
+.auth-route-modal__panel--signup .role-picker__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.auth-route-modal__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(20, 20, 24, 0.72);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.auth-route-modal .auth-card {
+  background: #ffffff;
+  backdrop-filter: none;
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.18);
+}
+
 .auth-card {
   width: min(100%, 34rem);
+}
+
+.auth-card h1,
+.status-screen h1,
+.dashboard-page h1,
+.feed-hero h1,
+.notifications-page__header h1,
+.public-hero__copy h1,
+.public-card blockquote,
+.avatar-panel__fallback,
+.public-avatar--fallback {
+  font-family: "Poppins", "Segoe UI", sans-serif;
 }
 
 .auth-card__header {
@@ -2146,6 +2234,31 @@ img {
   font-weight: 700;
 }
 
+.auth-checkbox {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--copy-muted);
+}
+
+.auth-checkbox input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0.18rem 0 0;
+}
+
+.auth-checkbox span {
+  line-height: 1.55;
+}
+
+.auth-checkbox a {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
 .auth-message {
   padding: 0.85rem 1rem;
   border-radius: 1rem;
@@ -2160,6 +2273,56 @@ img {
 .auth-message--error {
   background: rgba(196, 59, 59, 0.1);
   color: #8e2727;
+}
+
+.terms-page {
+  min-height: calc(100vh - 11rem);
+  display: grid;
+  place-items: center;
+}
+
+.terms-card {
+  width: min(100%, 48rem);
+  padding: 1.5rem;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-xl);
+  background: #ffffff;
+  box-shadow: var(--shadow-lg);
+}
+
+.terms-card h1 {
+  margin: 0.8rem 0 0.9rem;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: clamp(2rem, 4.5vw, 3.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.terms-card > p {
+  margin: 0;
+  color: var(--copy-muted);
+}
+
+.terms-stack {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+
+.terms-stack section {
+  padding-top: 1rem;
+  border-top: 1px solid rgba(17, 17, 17, 0.08);
+}
+
+.terms-stack h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.terms-stack p {
+  margin: 0;
+  color: var(--copy-muted);
+  line-height: 1.7;
 }
 
 .role-picker {
@@ -4631,7 +4794,7 @@ img {
   margin: 0;
   max-width: 38rem;
   color: rgba(255, 246, 239, 0.94);
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Poppins", "Segoe UI", sans-serif;
   font-size: clamp(1rem, 2vw, 1.18rem);
   font-weight: 700;
   line-height: 1.45;
@@ -8297,5 +8460,114 @@ img {
 
   .baseline-footer__headline:hover {
     transform: translateY(-0.18rem);
+  }
+}
+.profile-name-row,
+.feed-card__name,
+.feed-comment__author,
+.dashboard-summary__value,
+.notification-card__actor,
+.messages-thread-card__row strong {
+  align-items: center;
+  column-gap: 0.45rem;
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+
+.verified-artist-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.verified-artist-badge__halo {
+  align-items: center;
+  background: #6f58ff;
+  border-radius: 999px;
+  box-shadow: 0 10px 22px rgba(111, 88, 255, 0.24);
+  display: inline-flex;
+  height: 1.15rem;
+  justify-content: center;
+  width: 1.15rem;
+}
+
+.verified-artist-badge__halo svg {
+  fill: #ffcf53;
+  height: 0.68rem;
+  width: 0.68rem;
+}
+
+.creator-access-card {
+  gap: 1.4rem;
+}
+
+.creator-access-card__header,
+.creator-access-card__body {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.creator-access-card__header {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  padding-bottom: 1rem;
+}
+
+.creator-access-card__header h2 {
+  margin-bottom: 0.45rem;
+}
+
+.creator-access-card__header p,
+.creator-access-card__meta span,
+.notification-card__actor {
+  color: rgba(15, 23, 42, 0.68);
+}
+
+.creator-access-card__status {
+  flex-shrink: 0;
+}
+
+.creator-access-pill {
+  align-items: center;
+  background: rgba(109, 84, 255, 0.1);
+  border: 1px solid rgba(109, 84, 255, 0.18);
+  border-radius: 999px;
+  color: #4632c8;
+  display: inline-flex;
+  font-size: 0.84rem;
+  font-weight: 700;
+  gap: 0.5rem;
+  letter-spacing: 0.02em;
+  padding: 0.6rem 0.9rem;
+}
+
+.creator-access-pill--verified {
+  background: rgba(255, 207, 83, 0.16);
+  border-color: rgba(255, 207, 83, 0.34);
+  color: #6f58ff;
+}
+
+.creator-access-card__meta {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.creator-access-card__meta strong {
+  color: #111827;
+  font-size: 0.96rem;
+}
+
+@media (max-width: 860px) {
+  .creator-access-card__header,
+  .creator-access-card__body {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .creator-access-card__body .solid-button,
+  .creator-access-card__body .ghost-button {
+    width: 100%;
   }
 }

@@ -6,6 +6,8 @@ export type Profile = {
   email: string;
   full_name: string;
   role: AppRole;
+  is_verified_artist: boolean;
+  verified_artist_at: string | null;
   bio: string | null;
   username: string | null;
   avatar_url: string | null;
@@ -30,6 +32,8 @@ export type PublicCreatorProfile = {
   id: string;
   slug: string;
   full_name: string;
+  is_verified_artist: boolean;
+  verified_artist_at: string | null;
   username: string | null;
   avatar_url: string | null;
   bio: string | null;
@@ -43,6 +47,8 @@ export type PublicCreatorProfile = {
 export type PublicProfile = {
   id: string;
   full_name: string;
+  is_verified_artist: boolean;
+  verified_artist_at: string | null;
   username: string | null;
   avatar_url: string | null;
   bio: string | null;
@@ -71,6 +77,7 @@ export type FeedComment = {
   created_at: string;
   author_id: string;
   full_name: string;
+  author_is_verified_artist: boolean;
   username: string | null;
   avatar_url: string | null;
 };
@@ -93,6 +100,7 @@ export type FeedPost = {
   created_at: string;
   is_pinned: boolean;
   full_name: string;
+  is_verified_artist: boolean;
   username: string | null;
   avatar_url: string | null;
   creator_slug: string | null;
@@ -110,6 +118,7 @@ export type InboxThread = {
   thread_id: string;
   peer_id: string;
   peer_full_name: string;
+  peer_is_verified_artist: boolean;
   peer_username: string | null;
   peer_avatar_url: string | null;
   peer_role: AppRole;
@@ -126,6 +135,7 @@ export type DirectMessage = {
   body: string;
   created_at: string;
   full_name: string;
+  is_verified_artist: boolean;
   username: string | null;
   avatar_url: string | null;
 };
@@ -141,6 +151,7 @@ export type NotificationItem = {
   is_read: boolean;
   created_at: string;
   actor_full_name: string | null;
+  actor_is_verified_artist: boolean;
   actor_username: string | null;
   actor_avatar_url: string | null;
 };
@@ -167,4 +178,5 @@ export type SignInInput = {
 export type SignUpInput = SignInInput & {
   fullName: string;
   role: AppRole;
+  acceptedTerms: boolean;
 };

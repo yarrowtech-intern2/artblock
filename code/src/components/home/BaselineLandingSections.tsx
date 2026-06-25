@@ -452,9 +452,7 @@ export const BaselineLandingSections = () => {
           <div className="baseline-facilities__cards">
             {facilities.map((facility, index) => (
               <figure
-                className={`baseline-facilities__card baseline-facilities__card--${facility.tone} baseline-reveal baseline-reveal--lift${
-                  index === 1 ? " is-offset" : ""
-                }`}
+                className={`baseline-facilities__card baseline-facilities__card--${facility.tone} baseline-reveal baseline-reveal--lift`}
                 data-reveal
                 id={facility.id}
                 key={facility.name}
@@ -469,10 +467,6 @@ export const BaselineLandingSections = () => {
                   preload="metadata"
                   src={facility.video}
                 />
-                <figcaption>
-                  <strong>{facility.name}</strong>
-                  <span>{facility.description}</span>
-                </figcaption>
               </figure>
             ))}
           </div>

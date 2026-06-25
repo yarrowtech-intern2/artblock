@@ -102,25 +102,19 @@ export const PinnedStorySections = () => {
       const progress = clamp(-rect.top / travel);
 
       section.style.setProperty("--story-progress", progress.toFixed(4));
-      section.style.setProperty(
-        "--story-blue-pattern",
-        easeInOutCubic(mapRange(progress, 0.14, 0.3)).toFixed(4)
-      );
-      section.style.setProperty(
-        "--story-blue-content",
-        easeInOutCubic(mapRange(progress, 0.28, 0.48)).toFixed(4)
-      );
+      section.style.setProperty("--story-blue-pattern", "1");
+      section.style.setProperty("--story-blue-content", "1");
       section.style.setProperty(
         "--story-violet-slide",
-        easeInOutCubic(mapRange(progress, 0.5, 0.72)).toFixed(4)
+        easeInOutCubic(mapRange(progress, 0.18, 0.38)).toFixed(4)
       );
       section.style.setProperty(
         "--story-violet-pattern",
-        easeInOutCubic(mapRange(progress, 0.72, 0.86)).toFixed(4)
+        easeInOutCubic(mapRange(progress, 0.3, 0.48)).toFixed(4)
       );
       section.style.setProperty(
         "--story-violet-content",
-        easeInOutCubic(mapRange(progress, 0.82, 1)).toFixed(4)
+        easeInOutCubic(mapRange(progress, 0.36, 0.56)).toFixed(4)
       );
     };
 

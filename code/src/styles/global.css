@@ -7530,6 +7530,7 @@ img {
   gap: 0.75rem;
   padding: 1rem;
   padding-top: 0.75rem;
+  padding-bottom: 0;
   width: 100%;
   max-width: 100%;
   overflow-x: clip;
@@ -8248,7 +8249,7 @@ img {
   min-height: 100svh;
   min-height: 100dvh;
   margin-inline: calc(var(--baseline-page-pad) * -1);
-  margin-bottom: calc(var(--baseline-page-pad) * -1);
+  margin-bottom: -15px;
   margin-top: 0.75rem;
   overflow: hidden;
   isolation: isolate;
@@ -8445,6 +8446,7 @@ img {
     --baseline-page-pad: 1rem;
     padding: 1rem;
     padding-top: 0.5rem;
+    padding-bottom: 0;
   }
 
   .baseline-programs__link {
@@ -8574,6 +8576,7 @@ img {
     --baseline-page-pad: 1.5rem;
     padding: 1.5rem;
     padding-top: 0.75rem;
+    padding-bottom: 0;
   }
 
   .baseline-trust,

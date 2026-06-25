@@ -2100,33 +2100,41 @@ img {
     min-height: 100vh;
     min-height: 100svh;
     min-height: 100dvh;
-    padding-top: 6.25rem;
+    padding-top: 7rem;
     padding-bottom: 3.25rem;
   }
 
   .lumora-hero__content-grid {
     align-self: stretch;
     gap: 1.25rem;
+    justify-items: center;
   }
 
   .lumora-hero__copy {
     gap: 1.1rem;
-    max-width: min(16rem, 62vw);
+    align-items: center;
+    max-width: min(19rem, 100%);
+    margin-top: clamp(5.5rem, 18vh, 8.5rem);
+    margin-inline: auto;
+    text-align: center;
   }
 
   .lumora-hero__title {
-    max-width: 7ch;
+    max-width: 8ch;
     font-size: clamp(2.15rem, 10vw, 3.2rem);
     line-height: 0.92;
+    justify-items: center;
   }
 
   .lumora-rating-row {
     gap: 0.5rem;
     font-size: 0.8rem;
+    justify-content: center;
   }
 
   .lumora-hero__cta-row {
     gap: 0.55rem;
+    justify-content: center;
   }
 
   .lumora-pill-button {
@@ -2145,6 +2153,7 @@ img {
   .lumora-hero__aside {
     margin-top: auto;
     gap: 1rem;
+    align-items: center;
   }
 
   .lumora-hero-card,

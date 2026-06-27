@@ -55,6 +55,7 @@ export const BottomNav = () => {
     badge?: number
   ) => (
     <NavLink
+      aria-label={label}
       className={({ isActive }) =>
         `bottom-nav__item${isActive ? " bottom-nav__item--active" : ""}`
       }
@@ -68,7 +69,6 @@ export const BottomNav = () => {
           </span>
         ) : null}
       </span>
-      <span className="bottom-nav__label">{label}</span>
     </NavLink>
   );
 
@@ -125,7 +125,6 @@ export const BottomNav = () => {
               <line stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" x1="5" x2="19" y1="12" y2="12" />
             </svg>
           </span>
-          <span className="bottom-nav__label">Create</span>
         </NavLink>
 
         {navItem(

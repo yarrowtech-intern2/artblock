@@ -1,6 +1,13 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type FormEvent } from "react";
 import { z } from "zod";
 import type { FeedPostType } from "../../lib/supabase.types";
+import {
+  defaultRichPostStyle,
+  getRichPostStyleVars,
+  serializeRichPostPayload,
+  type PostTextAlign,
+  type RichPostStyle
+} from "../../lib/postRichContent";
 import { createFeedPost, renderFormattedText, uploadPostMedia } from "../../lib/profile";
 
 const postOptions: { label: string; value: FeedPostType }[] = [
@@ -22,6 +29,14 @@ type PostComposerProps = {
 };
 
 const emptyPollOptions = ["", ""];
+const titleWeightOptions: RichPostStyle["titleWeight"][] = [700, 800, 900];
+const bodyWeightOptions: RichPostStyle["bodyWeight"][] = [400, 500, 600, 700];
+const titleFontOptions = [
+  { label: "Space Grotesk", value: "space" },
+  { label: "Onest", value: "onest" },
+  { label: "Poppins", value: "poppins" }
+] as const;
+const textAlignOptions: PostTextAlign[] = ["left", "center", "right"];
 
 export const PostComposer = ({
   userId,
@@ -38,6 +53,8 @@ export const PostComposer = ({
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
   const [isExpanded, setExpanded] = useState(variant === "dashboard");
+  const [richStyle, setRichStyle] = useState<RichPostStyle>(defaultRichPostStyle);
+  const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const mediaAccept =
     postType === "video" ? "video/mp4,video/webm,video/quicktime" : "image/png,image/jpeg,image/webp";
@@ -56,9 +73,54 @@ export const PostComposer = ({
     setPollOptions(emptyPollOptions);
     setSelectedFile(null);
     setPreviewUrl(null);
+    setRichStyle(defaultRichPostStyle);
     if (variant === "feed") {
       setExpanded(false);
     }
+  };
+
+  const wrapBodySelection = (prefix: string, suffix = prefix, placeholder = "text") => {
+    const textarea = bodyTextareaRef.current;
+    if (!textarea) {
+      setBody((current) => `${current}${prefix}${placeholder}${suffix}`);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = body.slice(start, end) || placeholder;
+    const nextValue = `${body.slice(0, start)}${prefix}${selected}${suffix}${body.slice(end)}`;
+    setBody(nextValue);
+
+    window.requestAnimationFrame(() => {
+      textarea.focus();
+      const selectionStart = start + prefix.length;
+      const selectionEnd = selectionStart + selected.length;
+      textarea.setSelectionRange(selectionStart, selectionEnd);
+    });
+  };
+
+  const addListToSelection = () => {
+    const textarea = bodyTextareaRef.current;
+    if (!textarea) {
+      setBody((current) => `${current}${current ? "\n" : ""}- list item`);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = body.slice(start, end) || "list item";
+    const transformed = selected
+      .split("\n")
+      .map((line) => (line.trim() ? `- ${line.replace(/^- /, "")}` : "- "))
+      .join("\n");
+    const nextValue = `${body.slice(0, start)}${transformed}${body.slice(end)}`;
+    setBody(nextValue);
+
+    window.requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start, start + transformed.length);
+    });
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -132,10 +194,18 @@ export const PostComposer = ({
       mediaUrl = uploadResult.data;
     }
 
+    const serializedBody = serializeRichPostPayload({
+      version: 1,
+      title: trimmedTitle || null,
+      body: trimmedBody || null,
+      style: richStyle
+    });
+
     const result = await createFeedPost(userId, {
       postType,
       title: trimmedTitle || null,
-      body: trimmedBody || null,
+      body: serializedBody,
+      plainBody: trimmedBody || null,
       mediaUrl,
       isPublished: true,
       pollOptions: postType === "poll" ? validPollOptions : []
@@ -151,6 +221,9 @@ export const PostComposer = ({
     setMessage("Post published to the feed.");
     await onPublished();
   };
+
+  const hasPreviewContent = Boolean(title.trim() || body.trim());
+  const richPreviewStyle = getRichPostStyleVars(richStyle, postType === "text") as CSSProperties;
 
   return (
     <section className={`editor-panel ${variant === "feed" ? "editor-panel--feed" : ""}`}>
@@ -240,6 +313,18 @@ export const PostComposer = ({
           </label>
         ) : null}
 
+        {postType !== "poll" ? (
+          <label className="dashboard-form__full">
+            Title
+            <input
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Add an optional title"
+              type="text"
+              value={title}
+            />
+          </label>
+        ) : null}
+
         {postType === "image" || postType === "video" ? (
           <label className="dashboard-form__full">
             {postType === "video" ? "Video" : "Image"}
@@ -296,11 +381,32 @@ export const PostComposer = ({
         {postType === "text" || postType === "poll" ? (
           <label className="dashboard-form__full">
             {postType === "text" ? "Formatted Text" : "Context / Description"}
+            <div className="composer-format-toolbar" role="toolbar" aria-label="Text formatting controls">
+              <button className="composer-format-button" onClick={() => wrapBodySelection("**", "**", "bold")} type="button">
+                Bold
+              </button>
+              <button className="composer-format-button" onClick={() => wrapBodySelection("*", "*", "italic")} type="button">
+                Italic
+              </button>
+              <button className="composer-format-button" onClick={() => wrapBodySelection("++", "++", "underline")} type="button">
+                Underline
+              </button>
+              <button className="composer-format-button" onClick={() => wrapBodySelection("~~", "~~", "strike")} type="button">
+                Strike
+              </button>
+              <button className="composer-format-button" onClick={() => wrapBodySelection("`", "`", "code")} type="button">
+                Code
+              </button>
+              <button className="composer-format-button" onClick={addListToSelection} type="button">
+                List
+              </button>
+            </div>
             <textarea
+              ref={bodyTextareaRef}
               onChange={(event) => setBody(event.target.value)}
               placeholder={
                 postType === "text"
-                  ? "Use **bold**, *italic*, `code`, and - list items."
+                  ? "Use **bold**, *italic*, ++underline++, ~~strike~~, `code`, and - list items."
                   : "Add optional context for the poll."
               }
               rows={postType === "text" ? 8 : 4}
@@ -312,7 +418,28 @@ export const PostComposer = ({
         {postType === "image" || postType === "video" ? (
           <label className="dashboard-form__full">
             Caption
+            <div className="composer-format-toolbar" role="toolbar" aria-label="Caption formatting controls">
+              <button className="composer-format-button" onClick={() => wrapBodySelection("**", "**", "bold")} type="button">
+                Bold
+              </button>
+              <button className="composer-format-button" onClick={() => wrapBodySelection("*", "*", "italic")} type="button">
+                Italic
+              </button>
+              <button className="composer-format-button" onClick={() => wrapBodySelection("++", "++", "underline")} type="button">
+                Underline
+              </button>
+              <button className="composer-format-button" onClick={() => wrapBodySelection("~~", "~~", "strike")} type="button">
+                Strike
+              </button>
+              <button className="composer-format-button" onClick={() => wrapBodySelection("`", "`", "code")} type="button">
+                Code
+              </button>
+              <button className="composer-format-button" onClick={addListToSelection} type="button">
+                List
+              </button>
+            </div>
             <textarea
+              ref={bodyTextareaRef}
               onChange={(event) => setBody(event.target.value)}
               placeholder="Write a caption for the media post."
               rows={4}
@@ -321,10 +448,210 @@ export const PostComposer = ({
           </label>
         ) : null}
 
-        {postType === "text" && body.trim().length > 0 ? (
+        <div className="dashboard-form__full composer-style-panel">
+          <div className="composer-style-panel__header">
+            <span>Text Controls</span>
+            <p>Adjust title/body sizing, colors, weight, alignment, and background.</p>
+          </div>
+
+          <div className="composer-style-grid">
+            <label>
+              Title font
+              <select
+                onChange={(event) =>
+                  setRichStyle((current) => ({
+                    ...current,
+                    titleFont: event.target.value as RichPostStyle["titleFont"]
+                  }))
+                }
+                value={richStyle.titleFont}
+              >
+                {titleFontOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Title weight
+              <select
+                onChange={(event) =>
+                  setRichStyle((current) => ({
+                    ...current,
+                    titleWeight: Number(event.target.value) as RichPostStyle["titleWeight"]
+                  }))
+                }
+                value={richStyle.titleWeight}
+              >
+                {titleWeightOptions.map((weight) => (
+                  <option key={weight} value={weight}>
+                    {weight}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Body weight
+              <select
+                onChange={(event) =>
+                  setRichStyle((current) => ({
+                    ...current,
+                    bodyWeight: Number(event.target.value) as RichPostStyle["bodyWeight"]
+                  }))
+                }
+                value={richStyle.bodyWeight}
+              >
+                {bodyWeightOptions.map((weight) => (
+                  <option key={weight} value={weight}>
+                    {weight}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Text align
+              <div className="composer-align-group">
+                {textAlignOptions.map((option) => (
+                  <button
+                    className={`composer-align-button${richStyle.textAlign === option ? " composer-align-button--active" : ""}`}
+                    key={option}
+                    onClick={() => setRichStyle((current) => ({ ...current, textAlign: option }))}
+                    type="button"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </label>
+
+            <label>
+              Title size
+              <input
+                max="42"
+                min="20"
+                onChange={(event) =>
+                  setRichStyle((current) => ({
+                    ...current,
+                    titleSize: Number(event.target.value)
+                  }))
+                }
+                type="range"
+                value={richStyle.titleSize}
+              />
+              <span className="composer-style-value">{richStyle.titleSize}px</span>
+            </label>
+
+            <label>
+              Body size
+              <input
+                max="24"
+                min="14"
+                onChange={(event) =>
+                  setRichStyle((current) => ({
+                    ...current,
+                    bodySize: Number(event.target.value)
+                  }))
+                }
+                type="range"
+                value={richStyle.bodySize}
+              />
+              <span className="composer-style-value">{richStyle.bodySize}px</span>
+            </label>
+
+            <label>
+              Title color
+              <input
+                onChange={(event) => setRichStyle((current) => ({ ...current, titleColor: event.target.value }))}
+                type="color"
+                value={richStyle.titleColor}
+              />
+            </label>
+
+            <label>
+              Body color
+              <input
+                onChange={(event) => setRichStyle((current) => ({ ...current, bodyColor: event.target.value }))}
+                type="color"
+                value={richStyle.bodyColor}
+              />
+            </label>
+          </div>
+
+          {postType === "text" ? (
+            <div className="composer-style-grid composer-style-grid--background">
+              <label>
+                Background
+                <select
+                  onChange={(event) =>
+                    setRichStyle((current) => ({
+                      ...current,
+                      backgroundMode: event.target.value as RichPostStyle["backgroundMode"]
+                    }))
+                  }
+                  value={richStyle.backgroundMode}
+                >
+                  <option value="none">None</option>
+                  <option value="solid">Solid</option>
+                  <option value="gradient">Gradient</option>
+                </select>
+              </label>
+
+              {richStyle.backgroundMode !== "none" ? (
+                <>
+                  <label>
+                    Background color
+                    <input
+                      onChange={(event) =>
+                        setRichStyle((current) => ({
+                          ...current,
+                          backgroundColor: event.target.value
+                        }))
+                      }
+                      type="color"
+                      value={richStyle.backgroundColor}
+                    />
+                  </label>
+
+                  {richStyle.backgroundMode === "gradient" ? (
+                    <label>
+                      Gradient color
+                      <input
+                        onChange={(event) =>
+                          setRichStyle((current) => ({
+                            ...current,
+                            backgroundColorSecondary: event.target.value
+                          }))
+                        }
+                        type="color"
+                        value={richStyle.backgroundColorSecondary}
+                      />
+                    </label>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        {hasPreviewContent ? (
           <div className="dashboard-form__full text-preview">
             <span>Preview</span>
-            <div dangerouslySetInnerHTML={{ __html: renderFormattedText(body) }} />
+            <div
+              className={`rich-post-surface${postType === "text" ? " rich-post-surface--text" : ""}`}
+              style={richPreviewStyle}
+            >
+              {title.trim() ? <h3 className="rich-post-surface__title">{title.trim()}</h3> : null}
+              {body.trim() ? (
+                <div
+                  className="rich-post-surface__body"
+                  dangerouslySetInnerHTML={{ __html: renderFormattedText(body.trim()) }}
+                />
+              ) : null}
+            </div>
           </div>
         ) : null}
 

@@ -28,6 +28,8 @@ export const renderFormattedText = (value: string) => {
     .replace(/>/g, "&gt;");
 
   const withFormatting = escaped
+    .replace(/\+\+(.+?)\+\+/g, "<u>$1</u>")
+    .replace(/~~(.+?)~~/g, "<s>$1</s>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`(.+?)`/g, "<code>$1</code>");
@@ -751,6 +753,7 @@ type CreateFeedPostInput = {
   postType: FeedPostType;
   title?: string | null;
   body?: string | null;
+  plainBody?: string | null;
   mediaUrl?: string | null;
   isPublished?: boolean;
   pollOptions?: string[];
@@ -769,7 +772,7 @@ export const createFeedPost = async (userId: string, input: CreateFeedPostInput)
     title: input.title ?? null,
     body: input.body ?? null,
     media_url: input.mediaUrl ?? null,
-    caption: input.postType === "image" || input.postType === "video" ? input.body ?? null : null,
+    caption: input.postType === "image" || input.postType === "video" ? input.plainBody ?? input.body ?? null : null,
     is_published: input.isPublished ?? true
   };
 

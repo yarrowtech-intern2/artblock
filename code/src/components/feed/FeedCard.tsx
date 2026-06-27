@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { getIdentityNameClass } from "../../lib/identity";
+import { getPostContentText, getRichPostStyleVars } from "../../lib/postRichContent";
 import { Link } from "react-router-dom";
 import { addComment, renderFormattedText, togglePostLike, togglePostSave, voteOnPoll } from "../../lib/profile";
 import type { FeedPost } from "../../types/auth";
@@ -93,6 +94,8 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
 
   const totalVotes = post.poll_options.reduce((sum, option) => sum + option.vote_count, 0);
   const canRevealPollResults = Boolean(post.voted_option_id) || totalVotes > 0;
+  const postContent = getPostContentText(post.title, post.body);
+  const postTextStyle = getRichPostStyleVars(postContent.style, post.post_type === "text") as CSSProperties;
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -185,16 +188,30 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
         ) : null}
 
         {post.post_type === "text" ? (
-          <div className="feed-text-card">
-            {post.title ? <h3>{post.title}</h3> : null}
-            <div dangerouslySetInnerHTML={{ __html: renderFormattedText(post.body ?? "") }} />
+          <div
+            className={`feed-text-card rich-post-surface${postContent.isRich ? " rich-post-surface--enhanced rich-post-surface--text" : ""}`}
+            style={postContent.isRich ? postTextStyle : undefined}
+          >
+            {postContent.title ? <h3 className={postContent.isRich ? "rich-post-surface__title" : undefined}>{postContent.title}</h3> : null}
+            <div
+              className={postContent.isRich ? "rich-post-surface__body" : undefined}
+              dangerouslySetInnerHTML={{ __html: renderFormattedText(postContent.body ?? "") }}
+            />
           </div>
         ) : null}
 
         {post.post_type === "poll" ? (
-          <div className="feed-poll-card">
-            <h3>{post.title ?? "Poll"}</h3>
-            {post.body ? <p>{post.body}</p> : null}
+          <div
+            className={`feed-poll-card rich-post-surface${postContent.isRich ? " rich-post-surface--enhanced" : ""}`}
+            style={postContent.isRich ? postTextStyle : undefined}
+          >
+            <h3 className={postContent.isRich ? "rich-post-surface__title" : undefined}>{postContent.title ?? "Poll"}</h3>
+            {postContent.body ? (
+              <div
+                className={postContent.isRich ? "rich-post-surface__body" : undefined}
+                dangerouslySetInnerHTML={{ __html: renderFormattedText(postContent.body) }}
+              />
+            ) : null}
             <div className="feed-poll-card__options">
               {post.poll_options.map((option) => {
                 const voteShare = totalVotes > 0 ? Math.round((option.vote_count / totalVotes) * 100) : 0;
@@ -228,10 +245,25 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
       </div>
 
       {/* Caption / body for media posts */}
-      {(post.post_type === "image" || post.post_type === "video") && (post.headline ?? post.body) ? (
+      {(post.post_type === "image" || post.post_type === "video") && (post.headline ?? postContent.title ?? postContent.body) ? (
         <div className="feed-card__caption">
           {post.headline ? <span className="feed-card__headline">{post.headline}</span> : null}
-          {post.body ? <p>{post.body}</p> : null}
+          <div
+            className={`rich-post-surface${postContent.isRich ? " rich-post-surface--enhanced" : ""}`}
+            style={postContent.isRich ? postTextStyle : undefined}
+          >
+            {postContent.title ? <h3 className={postContent.isRich ? "rich-post-surface__title" : "feed-card__caption-title"}>{postContent.title}</h3> : null}
+            {postContent.body ? (
+              postContent.isRich ? (
+                <div
+                  className="rich-post-surface__body"
+                  dangerouslySetInnerHTML={{ __html: renderFormattedText(postContent.body) }}
+                />
+              ) : (
+                <p>{postContent.body}</p>
+              )
+            ) : null}
+          </div>
         </div>
       ) : null}
 

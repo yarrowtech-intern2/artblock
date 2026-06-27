@@ -77,6 +77,7 @@ export type FeedComment = {
   created_at: string;
   author_id: string;
   full_name: string;
+  author_role: AppRole;
   author_is_verified_artist: boolean;
   username: string | null;
   avatar_url: string | null;
@@ -100,6 +101,7 @@ export type FeedPost = {
   created_at: string;
   is_pinned: boolean;
   full_name: string;
+  author_role: AppRole;
   is_verified_artist: boolean;
   username: string | null;
   avatar_url: string | null;
@@ -135,6 +137,7 @@ export type DirectMessage = {
   body: string;
   created_at: string;
   full_name: string;
+  sender_role: AppRole;
   is_verified_artist: boolean;
   username: string | null;
   avatar_url: string | null;
@@ -151,6 +154,7 @@ export type NotificationItem = {
   is_read: boolean;
   created_at: string;
   actor_full_name: string | null;
+  actor_role: AppRole | null;
   actor_is_verified_artist: boolean;
   actor_username: string | null;
   actor_avatar_url: string | null;

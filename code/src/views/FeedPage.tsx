@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { PostComposer } from "../components/dashboard/PostComposer";
 import { FeedCard } from "../components/feed/FeedCard";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
+import { getIdentityNameClass } from "../lib/identity";
 import { fetchFeedPosts, type FeedScope } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
 import type { FeedPost } from "../types/auth";
@@ -125,7 +126,7 @@ export const FeedPage = () => {
           <div className="feed-rail-card">
             <span className="section-heading__eyebrow">Profile</span>
             <h2 className="profile-name-row">
-              {profile?.full_name ?? "Account"}
+              <span className={getIdentityNameClass(profile?.role)}>{profile?.full_name ?? "Account"}</span>
               {profile?.is_verified_artist ? <VerifiedArtistBadge /> : null}
             </h2>
             <p>{profile?.bio ?? "Set your profile details to improve how you appear across the platform."}</p>

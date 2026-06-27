@@ -1320,6 +1320,8 @@ img {
 .lumora-hero__title-line {
   display: block;
   overflow: hidden;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
 }
 
 .lumora-hero__title-line span {
@@ -2122,7 +2124,7 @@ img {
   .lumora-hero__title {
     max-width: 8ch;
     font-size: clamp(2.15rem, 10vw, 3.2rem);
-    line-height: 0.92;
+    line-height: 0.98;
     justify-items: center;
   }
 
@@ -2970,6 +2972,16 @@ img {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.editor-panel__header > .solid-button {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  min-height: 2.65rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.95rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .editor-panel__header h2,
@@ -8344,10 +8356,12 @@ img {
 .baseline-footer__brand-mark {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.35rem;
-  font-weight: 500;
-  letter-spacing: -0.04em;
+}
+
+.baseline-footer__brand-image {
+  display: block;
+  width: clamp(7.75rem, 12vw, 9.5rem);
+  height: auto;
 }
 
 .baseline-footer__nav ul {
@@ -8785,6 +8799,24 @@ img {
   column-gap: 0.45rem;
   display: inline-flex;
   flex-wrap: wrap;
+}
+
+.identity-name {
+  display: inline-block;
+  line-height: inherit;
+  max-width: 100%;
+}
+
+.identity-name--creator {
+  background: linear-gradient(135deg, #c89212 0%, #9f6d06 42%, #7a5000 72%, #4f2f00 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.identity-name--follower {
+  color: var(--brand-accent);
 }
 
 .verified-artist-badge {

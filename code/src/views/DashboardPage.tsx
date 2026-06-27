@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { CreatorStudio } from "../components/dashboard/CreatorStudio";
 import { PostComposer } from "../components/dashboard/PostComposer";
 import { ProfileEditor } from "../components/dashboard/ProfileEditor";
+import { getIdentityNameClass } from "../lib/identity";
 import { fetchOwnCreatorProfile } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
@@ -47,7 +48,7 @@ export const DashboardPage = () => {
           <span className="section-heading__eyebrow">Dashboard</span>
           <h1>{profile.role === "creator" ? "Creator Hub" : "Visitor Hub"}</h1>
           <p>
-            Signed in as {profile.full_name}. Complete your account setup before adding deeper feed,
+            Signed in as <span className={getIdentityNameClass(profile.role)}>{profile.full_name}</span>. Complete your account setup before adding deeper feed,
             media, and community modules.
           </p>
         </div>

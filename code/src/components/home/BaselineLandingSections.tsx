@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import logoWhite from "../../public/logo/logo-white-transparent.png";
 import heroVideo1 from "../../public/videos/hero-1.mp4";
 import heroVideo2 from "../../public/videos/hero-2.mp4";
 import heroVideo3 from "../../public/videos/hero-3.mp4";
@@ -130,14 +131,6 @@ const ArrowIcon = ({ reverse = false }: { reverse?: boolean }) => (
       strokeLinecap="round"
       strokeWidth="1.8"
     />
-  </svg>
-);
-
-const TennisBallIcon = () => (
-  <svg aria-hidden="true" className="baseline-brand-icon" fill="none" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M4.8 5.6A9 9 0 0 0 4.8 18.4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-    <path d="M19.2 5.6a9 9 0 0 1 0 12.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
   </svg>
 );
 
@@ -544,8 +537,7 @@ export const BaselineLandingSections = () => {
 
         <div className="baseline-footer__mid">
           <div className="baseline-footer__brand-mark">
-            <TennisBallIcon />
-            <span>ArtBlock</span>
+            <img alt="ArtBlock" className="baseline-footer__brand-image" src={logoWhite} />
           </div>
 
           <nav className="baseline-footer__nav" aria-label="Footer navigation">

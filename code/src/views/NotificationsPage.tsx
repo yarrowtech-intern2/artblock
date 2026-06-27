@@ -5,6 +5,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead
 } from "../lib/profile";
+import { getIdentityNameClass } from "../lib/identity";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { getSupabaseClient } from "../lib/supabase";
 import { useAuth } from "../providers/AuthProvider";
@@ -170,7 +171,9 @@ export const NotificationsPage = () => {
                 <p>{item.body}</p>
                 {item.actor_full_name ? (
                   <span className="notification-card__actor profile-name-row">
-                    {item.actor_username ? `@${item.actor_username}` : item.actor_full_name}
+                    <span className={getIdentityNameClass(item.actor_role)}>
+                      {item.actor_username ? `@${item.actor_username}` : item.actor_full_name}
+                    </span>
                     {item.actor_is_verified_artist ? <VerifiedArtistBadge /> : null}
                   </span>
                 ) : null}

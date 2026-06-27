@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { getIdentityNameClass } from "../lib/identity";
 import { fetchPublicCreatorProfile } from "../lib/profile";
 import type { PublicCreatorProfile } from "../types/auth";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
@@ -72,7 +73,7 @@ export const CreatorPublicPage = () => {
           <div className="public-hero__copy">
             <span className="section-heading__eyebrow">Creator Profile</span>
             <h1 className="profile-name-row">
-              {creator.full_name}
+              <span className={getIdentityNameClass("creator")}>{creator.full_name}</span>
               {creator.is_verified_artist ? <VerifiedArtistBadge /> : null}
             </h1>
             <p>{creator.headline ?? creator.bio ?? "Independent creator on ArtBlock."}</p>

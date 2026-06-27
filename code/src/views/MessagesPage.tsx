@@ -7,6 +7,7 @@ import {
   sendDirectMessage
 } from "../lib/profile";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
+import { getIdentityNameClass } from "../lib/identity";
 import { getSupabaseClient } from "../lib/supabase";
 import { useAuth } from "../providers/AuthProvider";
 import type { DirectMessage, InboxThread } from "../types/auth";
@@ -245,7 +246,9 @@ export const MessagesPage = () => {
                   <div className="messages-thread-card__body">
                     <div className="messages-thread-card__row">
                       <strong>
-                        {thread.peer_username ? `@${thread.peer_username}` : thread.peer_full_name}
+                        <span className={getIdentityNameClass(thread.peer_role)}>
+                          {thread.peer_username ? `@${thread.peer_username}` : thread.peer_full_name}
+                        </span>
                         {thread.peer_is_verified_artist ? <VerifiedArtistBadge /> : null}
                       </strong>
                       <div className="messages-thread-card__meta">
@@ -293,7 +296,7 @@ export const MessagesPage = () => {
 
                     <div>
                       <strong className="profile-name-row">
-                        {activeThread.peer_full_name}
+                        <span className={getIdentityNameClass(activeThread.peer_role)}>{activeThread.peer_full_name}</span>
                         {activeThread.peer_is_verified_artist ? <VerifiedArtistBadge /> : null}
                       </strong>
                       <p>
@@ -328,8 +331,14 @@ export const MessagesPage = () => {
                         className={`message-bubble ${isOwn ? "message-bubble--own" : ""}`}
                         key={message.id}
                       >
-                        <strong className={!isOwn && message.is_verified_artist ? "profile-name-row" : undefined}>
-                          {isOwn ? "You" : message.username ? `@${message.username}` : message.full_name}
+                        <strong className={!isOwn ? "profile-name-row" : undefined}>
+                          {isOwn ? (
+                            "You"
+                          ) : (
+                            <span className={getIdentityNameClass(message.sender_role)}>
+                              {message.username ? `@${message.username}` : message.full_name}
+                            </span>
+                          )}
                           {!isOwn && message.is_verified_artist ? <VerifiedArtistBadge /> : null}
                         </strong>
                         <p>{message.body}</p>

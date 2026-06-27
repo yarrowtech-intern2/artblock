@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "./supabase";
-import type { Database, FeedPostType } from "./supabase.types";
+import type { AppRole, Database, FeedPostType } from "./supabase.types";
 import type {
   DirectMessage,
   FeedComment,
@@ -82,6 +82,30 @@ const mapPublicProfile = (
     subscriber_count: Number(row.subscriber_count ?? 0),
     post_count: Number(row.post_count ?? 0)
   };
+};
+
+const fetchProfileRoleMap = async (profileIds: string[]) => {
+  const supabase = getSupabaseClient();
+  const uniqueProfileIds = Array.from(new Set(profileIds.filter(Boolean)));
+
+  if (!supabase || uniqueProfileIds.length === 0) {
+    return new Map<string, AppRole>();
+  }
+
+  const { data, error } = await supabase
+    .from("public_member_profiles")
+    .select("id, role")
+    .in("id", uniqueProfileIds);
+
+  if (error) {
+    return new Map<string, AppRole>();
+  }
+
+  return new Map(
+    (((data ?? []) as Pick<Database["public"]["Views"]["public_member_profiles"]["Row"], "id" | "role">[])
+      .filter((row) => row.id && row.role)
+      .map((row) => [row.id!, row.role!]))
+  );
 };
 
 export const updateProfile = async (
@@ -505,36 +529,40 @@ export const fetchNotifications = async () => {
     return { data: [] as NotificationItem[], error: error.message };
   }
 
+  const notificationRows = ((data ?? []) as Database["public"]["Views"]["notification_items"]["Row"][]).filter(
+    (row) =>
+      row.id &&
+      row.recipient_id &&
+      row.type &&
+      row.title &&
+      row.body &&
+      row.created_at &&
+      row.is_read !== null
+  );
+  const roleMap = await fetchProfileRoleMap(
+    notificationRows.map((row) => row.actor_id).filter((value): value is string => Boolean(value))
+  );
+
   return {
-    data: ((data ?? []) as Database["public"]["Views"]["notification_items"]["Row"][])
-      .filter(
-        (row) =>
-          row.id &&
-          row.recipient_id &&
-          row.type &&
-          row.title &&
-          row.body &&
-          row.created_at &&
-          row.is_read !== null
-      )
-      .map(
-        (row) =>
-          ({
-            id: row.id!,
-            recipient_id: row.recipient_id!,
-            actor_id: row.actor_id,
-            type: row.type!,
-            title: row.title!,
-            body: row.body!,
-            link: row.link,
-            is_read: row.is_read!,
-            created_at: row.created_at!,
-            actor_full_name: row.actor_full_name,
-            actor_is_verified_artist: Boolean(row.actor_is_verified_artist),
-            actor_username: row.actor_username,
-            actor_avatar_url: row.actor_avatar_url
-          }) satisfies NotificationItem
-      ),
+    data: notificationRows.map(
+      (row) =>
+        ({
+          id: row.id!,
+          recipient_id: row.recipient_id!,
+          actor_id: row.actor_id,
+          type: row.type!,
+          title: row.title!,
+          body: row.body!,
+          link: row.link,
+          is_read: row.is_read!,
+          created_at: row.created_at!,
+          actor_full_name: row.actor_full_name,
+          actor_role: row.actor_id ? roleMap.get(row.actor_id) ?? "visitor" : null,
+          actor_is_verified_artist: Boolean(row.actor_is_verified_artist),
+          actor_username: row.actor_username,
+          actor_avatar_url: row.actor_avatar_url
+        }) satisfies NotificationItem
+    ),
     error: null
   };
 };
@@ -576,31 +604,33 @@ export const fetchDirectMessages = async (threadId: string) => {
     return { data: [] as DirectMessage[], error: error.message };
   }
 
+  const messageRows = ((data ?? []) as Database["public"]["Views"]["direct_message_entries"]["Row"][]).filter(
+    (row) =>
+      row.id &&
+      row.thread_id &&
+      row.sender_id &&
+      row.body &&
+      row.created_at &&
+      row.full_name
+  );
+  const roleMap = await fetchProfileRoleMap(messageRows.map((row) => row.sender_id!));
+
   return {
-    data: ((data ?? []) as Database["public"]["Views"]["direct_message_entries"]["Row"][])
-      .filter(
-        (row) =>
-          row.id &&
-          row.thread_id &&
-          row.sender_id &&
-          row.body &&
-          row.created_at &&
-          row.full_name
-      )
-      .map(
-        (row) =>
-          ({
-            id: row.id!,
-            thread_id: row.thread_id!,
-            sender_id: row.sender_id!,
-            body: row.body!,
-            created_at: row.created_at!,
-            full_name: row.full_name!,
-            is_verified_artist: Boolean(row.is_verified_artist),
-            username: row.username,
-            avatar_url: row.avatar_url
-          }) satisfies DirectMessage
-      ),
+    data: messageRows.map(
+      (row) =>
+        ({
+          id: row.id!,
+          thread_id: row.thread_id!,
+          sender_id: row.sender_id!,
+          body: row.body!,
+          created_at: row.created_at!,
+          full_name: row.full_name!,
+          sender_role: roleMap.get(row.sender_id!) ?? "visitor",
+          is_verified_artist: Boolean(row.is_verified_artist),
+          username: row.username,
+          avatar_url: row.avatar_url
+        }) satisfies DirectMessage
+    ),
     error: null
   };
 };
@@ -1019,10 +1049,16 @@ const hydrateFeedPosts = async (
       pollOptionsMap.set(row.post_id!, collection);
     });
 
+  const commentRows = ((commentsResponse.data ?? []) as Database["public"]["Views"]["comment_threads"]["Row"][]).filter(
+    (row) => row.id && row.post_id && row.body && row.created_at && row.author_id && row.full_name
+  );
+  const roleMap = await fetchProfileRoleMap([
+    ...basePosts.map((post) => post.author_id),
+    ...commentRows.map((row) => row.author_id!)
+  ]);
+
   const commentsMap = new Map<string, FeedComment[]>();
-  ((commentsResponse.data ?? []) as Database["public"]["Views"]["comment_threads"]["Row"][])
-    .filter((row) => row.id && row.post_id && row.body && row.created_at && row.author_id && row.full_name)
-    .forEach((row) => {
+  commentRows.forEach((row) => {
       const entry = asTable<FeedComment>({
         id: row.id!,
         post_id: row.post_id!,
@@ -1030,6 +1066,7 @@ const hydrateFeedPosts = async (
         created_at: row.created_at!,
         author_id: row.author_id!,
         full_name: row.full_name!,
+        author_role: roleMap.get(row.author_id!) ?? "visitor",
         author_is_verified_artist: Boolean(row.author_is_verified_artist),
         username: row.username,
         avatar_url: row.avatar_url
@@ -1058,6 +1095,7 @@ const hydrateFeedPosts = async (
     (post) =>
       ({
         ...post,
+        author_role: roleMap.get(post.author_id) ?? "visitor",
         like_count: statsMap.get(post.id)?.like_count ?? 0,
         comment_count: statsMap.get(post.id)?.comment_count ?? 0,
         liked_by_viewer: likedSet.has(post.id),

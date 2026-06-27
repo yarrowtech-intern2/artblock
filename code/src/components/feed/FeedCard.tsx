@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { getIdentityNameClass } from "../../lib/identity";
 import { Link } from "react-router-dom";
 import { addComment, renderFormattedText, togglePostLike, togglePostSave, voteOnPoll } from "../../lib/profile";
 import type { FeedPost } from "../../types/auth";
@@ -157,7 +158,7 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
           )}
           <div className="feed-card__identity-text">
             <strong className="feed-card__name">
-              {post.full_name}
+              <span className={getIdentityNameClass(post.author_role)}>{post.full_name}</span>
               {post.is_verified_artist ? <VerifiedArtistBadge /> : null}
             </strong>
             <p className="feed-card__meta">
@@ -304,7 +305,9 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
             {post.comments.map((comment) => (
               <article className="feed-comment" key={comment.id}>
                 <Link className="feed-comment__author" to={`/profiles/${comment.author_id}`}>
-                  {comment.username ? `@${comment.username}` : comment.full_name}
+                  <span className={getIdentityNameClass(comment.author_role)}>
+                    {comment.username ? `@${comment.username}` : comment.full_name}
+                  </span>
                   {comment.author_is_verified_artist ? <VerifiedArtistBadge /> : null}
                 </Link>
                 <span className="feed-comment__body">{comment.body}</span>

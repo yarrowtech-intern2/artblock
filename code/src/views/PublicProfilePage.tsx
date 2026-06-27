@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FeedCard } from "../components/feed/FeedCard";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
+import { getIdentityNameClass } from "../lib/identity";
 import {
   fetchProfilePosts,
   fetchProfileRelationshipState,
@@ -264,7 +265,7 @@ export const PublicProfilePage = () => {
               {publicProfile.role === "creator" ? "Creator" : "Member"}
             </span>
             <h1 className="profile-name-row">
-              {publicProfile.full_name}
+              <span className={getIdentityNameClass(publicProfile.role)}>{publicProfile.full_name}</span>
               {publicProfile.is_verified_artist ? <VerifiedArtistBadge /> : null}
             </h1>
             <p>

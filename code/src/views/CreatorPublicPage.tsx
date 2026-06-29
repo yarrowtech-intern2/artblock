@@ -6,6 +6,36 @@ import { fetchPublicCreatorProfile } from "../lib/profile";
 import type { PublicCreatorProfile } from "../types/auth";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 
+const CreatorPublicSkeleton = () => (
+  <section className="public-page profile-page-skeleton creator-page-skeleton">
+    <div className="public-hero creator-page-skeleton__hero">
+      <div className="public-hero__identity">
+        <div className="profile-page-skeleton__avatar shimmer" />
+        <div className="profile-page-skeleton__content">
+          <div className="profile-page-skeleton__line shimmer" style={{ width: "7rem" }} />
+          <div className="profile-page-skeleton__line shimmer" style={{ width: "14rem", height: "2rem" }} />
+          <div className="profile-page-skeleton__line shimmer" style={{ width: "18rem" }} />
+          <div className="profile-page-skeleton__line shimmer" style={{ width: "11rem" }} />
+        </div>
+      </div>
+    </div>
+
+    <div className="public-grid creator-page-skeleton__grid">
+      {[1, 2].map((item) => (
+        <article className="public-card creator-page-skeleton__card" key={item}>
+          <div className="profile-page-skeleton__line shimmer" style={{ width: "7rem" }} />
+          <div className="profile-page-skeleton__line shimmer" style={{ width: "13rem", height: "1.8rem" }} />
+          <div className="profile-page-skeleton__stack">
+            <div className="profile-page-skeleton__line shimmer" style={{ width: "100%" }} />
+            <div className="profile-page-skeleton__line shimmer" style={{ width: "88%" }} />
+            <div className="profile-page-skeleton__line shimmer" style={{ width: "76%" }} />
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+);
+
 export const CreatorPublicPage = () => {
   const { slug } = useParams();
   const [creator, setCreator] = useState<PublicCreatorProfile | null>(null);
@@ -31,13 +61,7 @@ export const CreatorPublicPage = () => {
   }, [slug]);
 
   if (status === "loading") {
-    return (
-      <div className="status-screen">
-        <div className="status-screen__card">
-          <p>Loading creator page...</p>
-        </div>
-      </div>
-    );
+    return <CreatorPublicSkeleton />;
   }
 
   if (status === "missing" || !creator) {

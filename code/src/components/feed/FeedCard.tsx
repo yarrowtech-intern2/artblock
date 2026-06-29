@@ -12,6 +12,9 @@ type FeedCardProps = {
   viewerId: string;
   onRefresh: () => Promise<void>;
   extraActions?: ReactNode;
+  canDelete?: boolean;
+  isDeleting?: boolean;
+  onDelete?: (post: FeedPost) => Promise<string | null>;
 };
 
 const formatDate = (value: string) => {
@@ -73,7 +76,30 @@ const SendIcon = () => (
   </svg>
 );
 
-export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardProps) => {
+const TrashIcon = () => (
+  <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+    <path d="M4 7h16" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    <path d="M10 11v6" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    <path d="M14 11v6" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    <path
+      d="M6 7.5 7 19a2 2 0 0 0 2 1.8h6a2 2 0 0 0 2-1.8l1-11.5"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="1.8"
+    />
+    <path d="M9.5 4.5h5l.8 2.5h-6.6l.8-2.5Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+  </svg>
+);
+
+export const FeedCard = ({
+  post,
+  viewerId,
+  onRefresh,
+  extraActions,
+  canDelete = false,
+  isDeleting = false,
+  onDelete
+}: FeedCardProps) => {
   const [isCommentsOpen, setCommentsOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
   const [isMutating, setMutating] = useState(false);
@@ -94,6 +120,7 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
     post.comment_permissions === "followers"
       ? "Only followers can comment on this post."
       : "Comments are turned off for this post.";
+  const showDeleteAction = canDelete && Boolean(onDelete);
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -151,6 +178,24 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
     await onRefresh();
   };
 
+  const handleDelete = async () => {
+    if (!onDelete || isDeleting) {
+      return;
+    }
+
+    setError(null);
+
+    if (!window.confirm("Delete this post? This action cannot be undone.")) {
+      return;
+    }
+
+    const deleteError = await onDelete(post);
+
+    if (deleteError) {
+      setError(deleteError);
+    }
+  };
+
   return (
     <article className="feed-card">
       {/* Header: avatar + author info */}
@@ -173,9 +218,21 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
           </div>
         </Link>
 
-        {post.is_pinned ? (
+        {post.is_pinned || showDeleteAction ? (
           <div className="feed-card__header-right">
-            <span className="feed-card__pin-badge">Pinned</span>
+            {post.is_pinned ? <span className="feed-card__pin-badge">Pinned</span> : null}
+            {showDeleteAction ? (
+              <button
+                aria-label="Delete post"
+                className="feed-card__delete-button"
+                disabled={isDeleting}
+                onClick={() => void handleDelete()}
+                type="button"
+              >
+                <TrashIcon />
+                <span>{isDeleting ? "Deleting" : "Delete"}</span>
+              </button>
+            ) : null}
           </div>
         ) : null}
       </header>

@@ -5,6 +5,7 @@ import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { getIdentityNameClass } from "../lib/identity";
 import { getPostContentText } from "../lib/postRichContent";
 import {
+  deletePost,
   fetchProfilePosts,
   fetchProfileRelationshipState,
   fetchPublicProfileById,
@@ -81,15 +82,21 @@ const ProfileStatIcon = ({ kind }: { kind: ProfileStatIconKind }) => {
 };
 
 type ProfilePostTileProps = {
-  isBusy: boolean;
-  isOwnCreatorProfile: boolean;
+  canDelete: boolean;
+  canPin: boolean;
+  isDeleting: boolean;
+  isPinning: boolean;
+  onDelete: (post: FeedPost) => void;
   onTogglePin: (post: FeedPost) => void;
   post: FeedPost;
 };
 
 const ProfilePostTile = ({
-  isBusy,
-  isOwnCreatorProfile,
+  canDelete,
+  canPin,
+  isDeleting,
+  isPinning,
+  onDelete,
   onTogglePin,
   post
 }: ProfilePostTileProps) => {
@@ -128,19 +135,77 @@ const ProfilePostTile = ({
         </div>
       ) : null}
 
-      {isOwnCreatorProfile ? (
-        <button
-          className="public-post-tile__pin-action"
-          disabled={isBusy}
-          onClick={() => onTogglePin(post)}
-          type="button"
-        >
-          {isBusy ? "..." : post.is_pinned ? "Unpin" : "Pin"}
-        </button>
+      {canDelete || canPin ? (
+        <div className="public-post-tile__actions">
+          {canPin ? (
+            <button
+              className="public-post-tile__pin-action"
+              disabled={isPinning || isDeleting}
+              onClick={() => onTogglePin(post)}
+              type="button"
+            >
+              {isPinning ? "..." : post.is_pinned ? "Unpin" : "Pin"}
+            </button>
+          ) : null}
+          {canDelete ? (
+            <button
+              className="public-post-tile__delete-action"
+              disabled={isDeleting || isPinning}
+              onClick={() => onDelete(post)}
+              type="button"
+            >
+              {isDeleting ? "Deleting" : "Delete"}
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </article>
   );
 };
+
+const PublicProfileSkeleton = () => (
+  <section className="public-page public-page--instagram profile-page-skeleton">
+    <header className="public-profile-showcase profile-page-skeleton__showcase">
+      <div className="profile-page-skeleton__cover shimmer" />
+      <div className="profile-page-skeleton__body">
+        <div className="profile-page-skeleton__avatar shimmer" />
+        <div className="profile-page-skeleton__content">
+          <div className="profile-page-skeleton__line shimmer" style={{ width: "12rem", height: "1.9rem" }} />
+          <div className="profile-page-skeleton__actions">
+            <div className="profile-page-skeleton__pill shimmer" />
+            <div className="profile-page-skeleton__pill shimmer" />
+            <div className="profile-page-skeleton__pill shimmer" />
+          </div>
+          <div className="profile-page-skeleton__stats">
+            {[1, 2, 3].map((item) => (
+              <div className="profile-page-skeleton__stat" key={item}>
+                <div className="profile-page-skeleton__line shimmer" style={{ width: "3.1rem" }} />
+                <div className="profile-page-skeleton__line shimmer" style={{ width: "4.4rem" }} />
+              </div>
+            ))}
+          </div>
+          <div className="profile-page-skeleton__stack">
+            <div className="profile-page-skeleton__line shimmer" style={{ width: "6rem" }} />
+            <div className="profile-page-skeleton__line shimmer" style={{ width: "18rem" }} />
+            <div className="profile-page-skeleton__line shimmer" style={{ width: "14rem" }} />
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div className="profile-page-skeleton__tabs">
+      {[1, 2, 3, 4].map((item) => (
+        <div className="profile-page-skeleton__tab shimmer" key={item} />
+      ))}
+    </div>
+
+    <div className="profile-page-skeleton__grid">
+      {[1, 2, 3, 4, 5, 6].map((item) => (
+        <div className="profile-page-skeleton__tile shimmer" key={item} />
+      ))}
+    </div>
+  </section>
+);
 
 export const PublicProfilePage = () => {
   const { id, slug } = useParams();
@@ -155,6 +220,7 @@ export const PublicProfilePage = () => {
   const [pageStatus, setPageStatus] = useState<"loading" | "ready" | "missing">("loading");
   const [isMutating, setMutating] = useState(false);
   const [isPinningPostId, setPinningPostId] = useState<string | null>(null);
+  const [isDeletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeVerifiedTooltip, setActiveVerifiedTooltip] = useState<"name" | "badge" | null>(null);
 
@@ -366,14 +432,38 @@ export const PublicProfilePage = () => {
     await loadProfile();
   };
 
-  if (pageStatus === "loading") {
-    return (
-      <div className="status-screen">
-        <div className="status-screen__card">
-          <p>Loading profile...</p>
-        </div>
-      </div>
+  const handleDeletePost = async (post: FeedPost) => {
+    if (!user) {
+      return;
+    }
+
+    if (!window.confirm("Delete this post? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeletingPostId(post.id);
+    setError(null);
+    const result = await deletePost(post.id, user.id);
+    setDeletingPostId(null);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    setPosts((current) => current.filter((item) => item.id !== post.id));
+    setPublicProfile((current) =>
+      current
+        ? {
+            ...current,
+            post_count: Math.max(0, current.post_count - 1)
+          }
+        : current
     );
+  };
+
+  if (pageStatus === "loading") {
+    return <PublicProfileSkeleton />;
   }
 
   if (pageStatus === "missing" || !publicProfile) {
@@ -589,9 +679,12 @@ export const PublicProfilePage = () => {
         <div className="public-post-grid">
           {visiblePosts.map((post) => (
             <ProfilePostTile
-              isBusy={isPinningPostId === post.id}
-              isOwnCreatorProfile={isOwnProfile && publicProfile.role === "creator"}
+              canDelete={isOwnProfile}
+              canPin={isOwnProfile && publicProfile.role === "creator"}
+              isDeleting={isDeletingPostId === post.id}
+              isPinning={isPinningPostId === post.id}
               key={post.id}
+              onDelete={(targetPost) => void handleDeletePost(targetPost)}
               onTogglePin={(targetPost) => void handleTogglePin(targetPost)}
               post={post}
             />

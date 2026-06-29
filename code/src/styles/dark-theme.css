@@ -535,6 +535,13 @@
   border-color: rgba(255, 255, 255, 0.07);
 }
 
+[data-theme="dark"] .feed-create-card p,
+[data-theme="amoled"] .feed-create-card p,
+[data-theme="dark"] .feed-rail-meta,
+[data-theme="amoled"] .feed-rail-meta {
+  color: var(--copy-muted);
+}
+
 [data-theme="dark"] .feed-rail-stats article,
 [data-theme="amoled"] .feed-rail-stats article {
   background: rgba(255, 255, 255, 0.06);
@@ -579,6 +586,43 @@
 [data-theme="dark"] .feed-card__actions,
 [data-theme="amoled"] .feed-card__actions {
   border-top-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .feed-text-card h3,
+[data-theme="dark"] .feed-poll-card h3,
+[data-theme="dark"] .feed-text-card p,
+[data-theme="dark"] .feed-text-card ul,
+[data-theme="dark"] .feed-card__caption-title,
+[data-theme="dark"] .feed-card__caption p,
+[data-theme="dark"] .feed-card__headline,
+[data-theme="amoled"] .feed-text-card h3,
+[data-theme="amoled"] .feed-poll-card h3,
+[data-theme="amoled"] .feed-text-card p,
+[data-theme="amoled"] .feed-text-card ul,
+[data-theme="amoled"] .feed-card__caption-title,
+[data-theme="amoled"] .feed-card__caption p,
+[data-theme="amoled"] .feed-card__headline {
+  color: #f2f2f5;
+}
+
+[data-theme="dark"] .feed-text-card:not(.rich-post-surface--enhanced) h3,
+[data-theme="dark"] .feed-poll-card:not(.rich-post-surface--enhanced) h3,
+[data-theme="dark"] .feed-text-card:not(.rich-post-surface--enhanced) p,
+[data-theme="dark"] .feed-text-card:not(.rich-post-surface--enhanced) ul,
+[data-theme="dark"] .feed-poll-card:not(.rich-post-surface--enhanced) p,
+[data-theme="dark"] .feed-poll-card:not(.rich-post-surface--enhanced) ul,
+[data-theme="amoled"] .feed-text-card:not(.rich-post-surface--enhanced) h3,
+[data-theme="amoled"] .feed-poll-card:not(.rich-post-surface--enhanced) h3,
+[data-theme="amoled"] .feed-text-card:not(.rich-post-surface--enhanced) p,
+[data-theme="amoled"] .feed-text-card:not(.rich-post-surface--enhanced) ul,
+[data-theme="amoled"] .feed-poll-card:not(.rich-post-surface--enhanced) p,
+[data-theme="amoled"] .feed-poll-card:not(.rich-post-surface--enhanced) ul {
+  color: #f2f2f5;
+}
+
+[data-theme="dark"] .feed-card__headline,
+[data-theme="amoled"] .feed-card__headline {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ─── Icon Actions ───────────────────────────────────────────── */
@@ -1224,4 +1268,16 @@
 [data-theme="amoled"] .ghost-button--danger {
   color: #fca5a5;
   border-color: rgba(252, 165, 165, 0.24);
+}
+
+[data-theme="dark"] .feed-card__delete-button,
+[data-theme="amoled"] .feed-card__delete-button {
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.24);
+  border-color: rgba(252, 165, 165, 0.2);
+}
+
+[data-theme="dark"] .feed-card__delete-button:hover:not(:disabled),
+[data-theme="amoled"] .feed-card__delete-button:hover:not(:disabled) {
+  background: rgba(127, 29, 29, 0.34);
 }

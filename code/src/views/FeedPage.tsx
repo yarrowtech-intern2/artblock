@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { PostComposer } from "../components/dashboard/PostComposer";
 import { FeedCard } from "../components/feed/FeedCard";
 import { FeedTopTabs } from "../components/feed/FeedTopTabs";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { getIdentityNameClass } from "../lib/identity";
-import { fetchFeedPosts, type FeedScope } from "../lib/profile";
+import { deletePost, fetchFeedPosts, type FeedScope } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
 import type { FeedPost } from "../types/auth";
 import { useSearchParams } from "react-router-dom";
@@ -47,6 +46,7 @@ export const FeedPage = () => {
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -172,15 +172,6 @@ export const FeedPage = () => {
             sticky={false}
           />
 
-          {/* Creator post composer */}
-          {profile?.role === "creator" && user ? (
-            <PostComposer
-              onPublished={() => loadFeed({ scope: feedScope, page: 0, append: false })}
-              userId={user.id}
-              variant="feed"
-            />
-          ) : null}
-
           {error ? <div className="auth-message auth-message--error">{error}</div> : null}
 
           {isLoading ? <FeedSkeleton /> : null}
@@ -207,7 +198,27 @@ export const FeedPage = () => {
           <div className="feed-grid">
             {posts.map((post) => (
               <FeedCard
+                canDelete={post.author_id === user?.id}
+                isDeleting={deletingPostId === post.id}
                 key={post.id}
+                onDelete={async (targetPost) => {
+                  if (!user) {
+                    return "You need to sign in to delete posts.";
+                  }
+
+                  setDeletingPostId(targetPost.id);
+                  setError(null);
+                  const result = await deletePost(targetPost.id, user.id);
+                  setDeletingPostId(null);
+
+                  if (result.error) {
+                    setError(result.error);
+                    return result.error;
+                  }
+
+                  setPosts((current) => current.filter((item) => item.id !== targetPost.id));
+                  return null;
+                }}
                 onRefresh={() => loadFeed({ scope: feedScope, page: 0, append: false })}
                 post={post}
                 viewerId={user?.id ?? ""}
@@ -236,20 +247,42 @@ export const FeedPage = () => {
 
         {/* Right sidebar — desktop only */}
         <aside className="feed-sidebar feed-sidebar--right">
-          <div className="feed-rail-card">
-            <span className="section-heading__eyebrow">Live Summary</span>
-            <h2>Feed pulse</h2>
-            <div className="feed-rail-stats">
-              <article>
-                <span>Posts</span>
-                <strong>{posts.length}</strong>
-              </article>
-              <article>
-                <span>Creators</span>
-                <strong>{new Set(posts.map((p) => p.author_id)).size}</strong>
-              </article>
+          {profile?.role === "creator" ? (
+            <div className="feed-rail-card feed-create-card">
+              <h2>Create a Post</h2>
+              <p>Post an Image, video, poll or Text</p>
+              <div className="feed-create-card__actions">
+                <Link className="solid-button" to={{ pathname: "/dashboard", hash: "#posting" }}>
+                  Post Content
+                </Link>
+                <Link
+                  aria-label="Create post"
+                  className="feed-create-card__plus"
+                  to={{ pathname: "/dashboard", hash: "#posting" }}
+                >
+                  <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+                    <line stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" x1="12" x2="12" y1="5" y2="19" />
+                    <line stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" x1="5" x2="19" y1="12" y2="12" />
+                  </svg>
+                </Link>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="feed-rail-card">
+              <span className="section-heading__eyebrow">Live Summary</span>
+              <h2>Feed pulse</h2>
+              <div className="feed-rail-stats">
+                <article>
+                  <span>Posts</span>
+                  <strong>{posts.length}</strong>
+                </article>
+                <article>
+                  <span>Creators</span>
+                  <strong>{new Set(posts.map((p) => p.author_id)).size}</strong>
+                </article>
+              </div>
+            </div>
+          )}
 
           <div className="feed-rail-card">
             <span className="section-heading__eyebrow">Quick Links</span>

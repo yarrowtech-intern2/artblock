@@ -1070,6 +1070,22 @@ export const togglePinnedPost = async (postId: string, userId: string, currently
   return { error: error?.message ?? null };
 };
 
+export const deletePost = async (postId: string, userId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { error } = await supabase
+    .from("posts")
+    .delete()
+    .eq("id", postId)
+    .eq("author_id", userId);
+
+  return { error: error?.message ?? null };
+};
+
 export const addComment = async (postId: string, userId: string, body: string) => {
   const supabase = getSupabaseClient();
 

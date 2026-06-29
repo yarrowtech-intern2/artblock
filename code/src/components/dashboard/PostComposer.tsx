@@ -229,15 +229,8 @@ export const PostComposer = ({
     <section className={`editor-panel ${variant === "feed" ? "editor-panel--feed" : ""}`}>
       <div className="editor-panel__header">
         <div>
-          <span className="section-heading__eyebrow">
-            {variant === "feed" ? "Create Post" : "Publish Content"}
-          </span>
-          <h2>{variant === "feed" ? "Post from your feed" : "Create for the feed"}</h2>
-          <p>
-            {variant === "feed"
-              ? "Use the same surface your audience sees, similar to Facebook and Instagram creator flows."
-              : "Publish images, videos, polls, or formatted text from the same creator workflow."}
-          </p>
+          <span className="section-heading__eyebrow">Posting</span>
+          <h2>{variant === "feed" ? "New post" : "Create post"}</h2>
         </div>
         {variant === "feed" ? (
           <button
@@ -257,7 +250,7 @@ export const PostComposer = ({
             onClick={() => setExpanded(true)}
             type="button"
           >
-            Share an update, upload media, or ask your audience something.
+            Share an update
           </button>
           <div className="feed-composer-trigger__actions">
             {postOptions.map((option) => (
@@ -450,8 +443,7 @@ export const PostComposer = ({
 
         <div className="dashboard-form__full composer-style-panel">
           <div className="composer-style-panel__header">
-            <span>Text Controls</span>
-            <p>Adjust title/body sizing, colors, weight, alignment, and background.</p>
+            <span>Style</span>
           </div>
 
           <div className="composer-style-grid">

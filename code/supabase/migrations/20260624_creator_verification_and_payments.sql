@@ -1,6 +1,7 @@
 alter table public.profiles
   add column if not exists is_verified_artist boolean not null default false,
-  add column if not exists verified_artist_at timestamptz;
+  add column if not exists verified_artist_at timestamptz,
+  add column if not exists gender text;
 
 create table if not exists public.artist_verification_payments (
   id uuid primary key default gen_random_uuid(),
@@ -147,6 +148,8 @@ select
   p.verified_artist_at,
   p.username,
   p.avatar_url,
+  p.cover_url,
+  p.gender,
   p.bio,
   p.website,
   p.location,
@@ -167,6 +170,8 @@ select
   p.verified_artist_at,
   p.username,
   p.avatar_url,
+  p.cover_url,
+  p.gender,
   p.bio,
   p.website,
   p.location,

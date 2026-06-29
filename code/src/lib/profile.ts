@@ -5,11 +5,14 @@ import type {
   FeedComment,
   FeedPost,
   InboxThread,
+  InteractionPermission,
   NotificationItem,
   PollOption,
   ProfileRelationshipState,
   PublicProfile,
-  PublicCreatorProfile
+  PublicCreatorProfile,
+  ProfileVisibility,
+  UserSettings
 } from "../types/auth";
 
 export const createSlug = (value: string) =>
@@ -57,6 +60,47 @@ export const renderFormattedText = (value: string) => {
 
 const asTable = <T>(value: T) => value;
 
+const DEFAULT_PROFILE_VISIBILITY: ProfileVisibility = "public";
+const DEFAULT_INTERACTION_PERMISSION: InteractionPermission = "everyone";
+
+const buildDefaultUserSettings = (profileId: string): UserSettings => ({
+  profile_id: profileId,
+  keep_me_signed_in: true,
+  profile_visibility: DEFAULT_PROFILE_VISIBILITY,
+  message_permissions: DEFAULT_INTERACTION_PERMISSION,
+  comment_permissions: DEFAULT_INTERACTION_PERMISSION,
+  notify_new_followers: true,
+  notify_new_subscribers: true,
+  notify_new_messages: true,
+  notify_post_likes: true,
+  notify_post_comments: true,
+  deactivated_at: null,
+  created_at: new Date(0).toISOString(),
+  updated_at: new Date(0).toISOString()
+});
+
+const mapUserSettings = (
+  row: Database["public"]["Tables"]["user_settings"]["Row"] | null,
+  profileId: string
+): UserSettings =>
+  row
+    ? {
+        profile_id: row.profile_id,
+        keep_me_signed_in: row.keep_me_signed_in,
+        profile_visibility: row.profile_visibility,
+        message_permissions: row.message_permissions,
+        comment_permissions: row.comment_permissions,
+        notify_new_followers: row.notify_new_followers,
+        notify_new_subscribers: row.notify_new_subscribers,
+        notify_new_messages: row.notify_new_messages,
+        notify_post_likes: row.notify_post_likes,
+        notify_post_comments: row.notify_post_comments,
+        deactivated_at: row.deactivated_at,
+        created_at: row.created_at,
+        updated_at: row.updated_at
+      }
+    : buildDefaultUserSettings(profileId);
+
 const mapPublicProfile = (
   row: Database["public"]["Views"]["public_member_profiles"]["Row"]
 ): PublicProfile | null => {
@@ -71,6 +115,8 @@ const mapPublicProfile = (
     verified_artist_at: row.verified_artist_at,
     username: row.username,
     avatar_url: row.avatar_url,
+    cover_url: row.cover_url,
+    gender: row.gender,
     bio: row.bio,
     website: row.website,
     location: row.location,
@@ -79,6 +125,10 @@ const mapPublicProfile = (
     headline: row.headline,
     about: row.about,
     featured_quote: row.featured_quote,
+    profile_visibility: (row.profile_visibility ?? DEFAULT_PROFILE_VISIBILITY) as ProfileVisibility,
+    message_permissions:
+      (row.message_permissions ?? DEFAULT_INTERACTION_PERMISSION) as InteractionPermission,
+    viewer_can_message: Boolean(row.viewer_can_message),
     follower_count: Number(row.follower_count ?? 0),
     following_count: Number(row.following_count ?? 0),
     subscriber_count: Number(row.subscriber_count ?? 0),
@@ -114,7 +164,14 @@ export const updateProfile = async (
   userId: string,
   input: Pick<
     Database["public"]["Tables"]["profiles"]["Update"],
-    "full_name" | "username" | "bio" | "website" | "location" | "avatar_url"
+    | "full_name"
+    | "username"
+    | "bio"
+    | "website"
+    | "location"
+    | "avatar_url"
+    | "cover_url"
+    | "gender"
   >
 ) => {
   const supabase = getSupabaseClient();
@@ -213,6 +270,29 @@ export const verifyArtistVerificationPayment = async (input: {
   };
 };
 
+export const manageOwnAccountLifecycle = async (action: "deactivate" | "delete") => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase.functions.invoke("manage-account-lifecycle", {
+    body: {
+      action
+    }
+  });
+
+  return {
+    error:
+      (typeof data === "object" && data && "error" in data && typeof data.error === "string"
+        ? data.error
+        : null) ??
+      error?.message ??
+      null
+  };
+};
+
 export const upsertCreatorProfile = async (
   userId: string,
   input: Pick<
@@ -280,7 +360,12 @@ export const fetchPublicCreatorProfile = async (slug: string) => {
   }
 
   return {
-    data: data as PublicCreatorProfile,
+    data: {
+      ...(data as PublicCreatorProfile),
+      profile_visibility:
+        (((data as Database["public"]["Views"]["public_creator_profiles"]["Row"]).profile_visibility ??
+          DEFAULT_PROFILE_VISIBILITY) as ProfileVisibility)
+    },
     error: null
   };
 };
@@ -329,6 +414,71 @@ export const fetchPublicProfileBySlug = async (slug: string) => {
     data: mapped,
     error: error?.message ?? (mapped ? null : "Profile not found.")
   };
+};
+
+export const fetchOwnUserSettings = async (profileId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return {
+      data: buildDefaultUserSettings(profileId),
+      error: "Supabase is not configured."
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("user_settings")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  return {
+    data: mapUserSettings(
+      (data as Database["public"]["Tables"]["user_settings"]["Row"] | null) ?? null,
+      profileId
+    ),
+    error: error?.message ?? null
+  };
+};
+
+export const updateOwnUserSettings = async (
+  profileId: string,
+  input: Partial<
+    Pick<
+      Database["public"]["Tables"]["user_settings"]["Update"],
+      | "keep_me_signed_in"
+      | "profile_visibility"
+      | "message_permissions"
+      | "comment_permissions"
+      | "notify_new_followers"
+      | "notify_new_subscribers"
+      | "notify_new_messages"
+      | "notify_post_likes"
+      | "notify_post_comments"
+    >
+  >
+) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const payload: Database["public"]["Tables"]["user_settings"]["Insert"] = {
+    profile_id: profileId,
+    ...input
+  };
+
+  const { error } = await (supabase.from("user_settings") as never as {
+    upsert: (
+      values: Database["public"]["Tables"]["user_settings"]["Insert"],
+      options: { onConflict: string }
+    ) => Promise<{ error: { message: string } | null }>;
+  }).upsert(payload, {
+    onConflict: "profile_id"
+  });
+
+  return { error: error?.message ?? null };
 };
 
 export const fetchProfileRelationshipState = async (viewerId: string, targetId: string) => {
@@ -709,7 +859,7 @@ export const markAllNotificationsRead = async () => {
   return { error: error?.message ?? null };
 };
 
-export const uploadAvatar = async (userId: string, file: File) => {
+const uploadProfileImage = async (userId: string, file: File, imageType: "avatar" | "cover") => {
   const supabase = getSupabaseClient();
 
   if (!supabase) {
@@ -717,7 +867,7 @@ export const uploadAvatar = async (userId: string, file: File) => {
   }
 
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const path = `${userId}/avatar-${Date.now()}.${extension}`;
+  const path = `${userId}/${imageType}-${Date.now()}.${extension}`;
   const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
 
   if (error) {
@@ -727,6 +877,12 @@ export const uploadAvatar = async (userId: string, file: File) => {
   const { data } = supabase.storage.from("avatars").getPublicUrl(path);
   return { data: data.publicUrl, error: null };
 };
+
+export const uploadAvatar = async (userId: string, file: File) =>
+  uploadProfileImage(userId, file, "avatar");
+
+export const uploadCoverImage = async (userId: string, file: File) =>
+  uploadProfileImage(userId, file, "cover");
 
 export const uploadPostMedia = async (userId: string, file: File) => {
   const supabase = getSupabaseClient();
@@ -993,7 +1149,10 @@ const hydrateFeedPosts = async (
       username: row.username,
       avatar_url: row.avatar_url,
       creator_slug: row.creator_slug,
-      headline: row.headline
+      headline: row.headline,
+      comment_permissions:
+        (row.comment_permissions ?? DEFAULT_INTERACTION_PERMISSION) as InteractionPermission,
+      viewer_can_comment: Boolean(row.viewer_can_comment)
     }));
 
   if (basePosts.length === 0) {

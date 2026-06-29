@@ -8,6 +8,7 @@ export type Json =
 
 export type AppRole = "visitor" | "creator";
 export type FeedPostType = "image" | "video" | "poll" | "text";
+export type ProfileGender = "male" | "female" | "non_binary" | "prefer_not_to_say";
 export type NotificationType =
   | "new_follower"
   | "new_subscriber"
@@ -372,6 +373,8 @@ export type Database = {
           bio: string | null;
           username: string | null;
           avatar_url: string | null;
+          cover_url: string | null;
+          gender: ProfileGender | null;
           website: string | null;
           location: string | null;
           created_at: string;
@@ -387,6 +390,8 @@ export type Database = {
           bio?: string | null;
           username?: string | null;
           avatar_url?: string | null;
+          cover_url?: string | null;
+          gender?: ProfileGender | null;
           website?: string | null;
           location?: string | null;
           created_at?: string;
@@ -402,6 +407,8 @@ export type Database = {
           bio?: string | null;
           username?: string | null;
           avatar_url?: string | null;
+          cover_url?: string | null;
+          gender?: ProfileGender | null;
           website?: string | null;
           location?: string | null;
           created_at?: string;
@@ -459,6 +466,62 @@ export type Database = {
           }
         ];
       };
+      user_settings: {
+        Row: {
+          profile_id: string;
+          keep_me_signed_in: boolean;
+          profile_visibility: "public" | "members" | "private";
+          message_permissions: "everyone" | "followers" | "nobody";
+          comment_permissions: "everyone" | "followers" | "nobody";
+          notify_new_followers: boolean;
+          notify_new_subscribers: boolean;
+          notify_new_messages: boolean;
+          notify_post_likes: boolean;
+          notify_post_comments: boolean;
+          deactivated_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          keep_me_signed_in?: boolean;
+          profile_visibility?: "public" | "members" | "private";
+          message_permissions?: "everyone" | "followers" | "nobody";
+          comment_permissions?: "everyone" | "followers" | "nobody";
+          notify_new_followers?: boolean;
+          notify_new_subscribers?: boolean;
+          notify_new_messages?: boolean;
+          notify_post_likes?: boolean;
+          notify_post_comments?: boolean;
+          deactivated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          keep_me_signed_in?: boolean;
+          profile_visibility?: "public" | "members" | "private";
+          message_permissions?: "everyone" | "followers" | "nobody";
+          comment_permissions?: "everyone" | "followers" | "nobody";
+          notify_new_followers?: boolean;
+          notify_new_subscribers?: boolean;
+          notify_new_messages?: boolean;
+          notify_post_likes?: boolean;
+          notify_post_comments?: boolean;
+          deactivated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: {
       public_creator_profiles: {
@@ -470,12 +533,15 @@ export type Database = {
           verified_artist_at: string | null;
           username: string | null;
           avatar_url: string | null;
+          cover_url: string | null;
+          gender: ProfileGender | null;
           bio: string | null;
           website: string | null;
           location: string | null;
           headline: string | null;
           about: string | null;
           featured_quote: string | null;
+          profile_visibility: "public" | "members" | "private" | null;
         };
       };
       public_member_profiles: {
@@ -486,6 +552,8 @@ export type Database = {
           verified_artist_at: string | null;
           username: string | null;
           avatar_url: string | null;
+          cover_url: string | null;
+          gender: ProfileGender | null;
           bio: string | null;
           website: string | null;
           location: string | null;
@@ -494,6 +562,9 @@ export type Database = {
           headline: string | null;
           about: string | null;
           featured_quote: string | null;
+          profile_visibility: "public" | "members" | "private" | null;
+          message_permissions: "everyone" | "followers" | "nobody" | null;
+          viewer_can_message: boolean | null;
           follower_count: number | null;
           following_count: number | null;
           subscriber_count: number | null;
@@ -517,6 +588,8 @@ export type Database = {
           avatar_url: string | null;
           creator_slug: string | null;
           headline: string | null;
+          comment_permissions: "everyone" | "followers" | "nobody" | null;
+          viewer_can_comment: boolean | null;
         };
       };
       post_engagement_stats: {

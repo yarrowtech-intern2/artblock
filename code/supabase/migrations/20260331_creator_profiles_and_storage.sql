@@ -1,8 +1,20 @@
 alter table public.profiles
   add column if not exists username text,
   add column if not exists avatar_url text,
+  add column if not exists cover_url text,
+  add column if not exists gender text,
   add column if not exists website text,
   add column if not exists location text;
+
+alter table public.profiles
+  drop constraint if exists profiles_gender_check;
+
+alter table public.profiles
+  add constraint profiles_gender_check
+  check (
+    gender is null
+    or gender in ('male', 'female', 'non_binary', 'prefer_not_to_say')
+  );
 
 create unique index if not exists profiles_username_unique_idx
 on public.profiles (username)
@@ -72,6 +84,8 @@ select
   p.full_name,
   p.username,
   p.avatar_url,
+  p.cover_url,
+  p.gender,
   p.bio,
   p.website,
   p.location,

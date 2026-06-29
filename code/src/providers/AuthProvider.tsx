@@ -7,8 +7,10 @@ import {
   type PropsWithChildren
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { getSupabaseClient } from "../lib/supabase";
 import { isSupabaseConfigured } from "../lib/env";
+import { applyKeepSignedInPreference } from "../lib/authSessionPreference";
+import { fetchOwnUserSettings, updateOwnUserSettings } from "../lib/profile";
+import { getSupabaseClient } from "../lib/supabase";
 import type {
   AuthContextValue,
   Profile,
@@ -55,11 +57,41 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [settings, setSettings] = useState<AuthContextValue["settings"]>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<AuthContextValue["status"]>(
     isSupabaseConfigured ? "loading" : "disabled"
   );
   const mountedRef = useRef(true);
+
+  const loadAuthenticatedAccount = async (nextUser: User) => {
+    if (!supabase) {
+      return;
+    }
+
+    const [nextProfile, settingsResult] = await Promise.all([
+      readProfile(nextUser),
+      fetchOwnUserSettings(nextUser.id)
+    ]);
+
+    if (!mountedRef.current) {
+      return;
+    }
+
+    applyKeepSignedInPreference(settingsResult.data.keep_me_signed_in);
+
+    if (settingsResult.data.deactivated_at) {
+      setProfile(null);
+      setSettings(settingsResult.data);
+      setError("This account has been deactivated.");
+      await supabase.auth.signOut();
+      return;
+    }
+
+    setProfile(nextProfile);
+    setSettings(settingsResult.data);
+    setStatus("authenticated");
+  };
 
   useEffect(() => {
     mountedRef.current = true;
@@ -84,17 +116,13 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       setUser(initialSession?.user ?? null);
 
       if (initialSession?.user) {
-        const nextProfile = await readProfile(initialSession.user);
-
-        if (!mountedRef.current) {
-          return;
-        }
-
-        setProfile(nextProfile);
-        setStatus("authenticated");
+        setStatus("loading");
+        await loadAuthenticatedAccount(initialSession.user);
         return;
       }
 
+      setProfile(null);
+      setSettings(null);
       setStatus("anonymous");
     };
 
@@ -108,19 +136,13 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
       if (!nextSession?.user) {
         setProfile(null);
+        setSettings(null);
         setStatus("anonymous");
         return;
       }
 
       setStatus("loading");
-      void readProfile(nextSession.user).then((nextProfile) => {
-        if (!mountedRef.current) {
-          return;
-        }
-
-        setProfile(nextProfile);
-        setStatus("authenticated");
-      });
+      void loadAuthenticatedAccount(nextSession.user);
     });
 
     return () => {
@@ -138,7 +160,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
     setError(null);
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      applyKeepSignedInPreference(input.keepMeSignedIn);
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: input.email,
         password: input.password
       });
@@ -146,6 +170,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       if (signInError) {
         setError(signInError.message);
         return { error: signInError.message };
+      }
+
+      if (data.user) {
+        void updateOwnUserSettings(data.user.id, {
+          keep_me_signed_in: input.keepMeSignedIn
+        });
       }
 
       return { error: null };
@@ -211,16 +241,66 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setProfile(nextProfile);
   };
 
+  const refreshSettings = async () => {
+    if (!user) {
+      setSettings(null);
+      return;
+    }
+
+    const nextSettings = await fetchOwnUserSettings(user.id);
+    applyKeepSignedInPreference(nextSettings.data.keep_me_signed_in);
+    setSettings(nextSettings.data);
+  };
+
+  const updateSettings = async (
+    input: Partial<
+      Pick<
+        NonNullable<AuthContextValue["settings"]>,
+        | "keep_me_signed_in"
+        | "profile_visibility"
+        | "message_permissions"
+        | "comment_permissions"
+        | "notify_new_followers"
+        | "notify_new_subscribers"
+        | "notify_new_messages"
+        | "notify_post_likes"
+        | "notify_post_comments"
+      >
+    >
+  ) => {
+    if (!user) {
+      return { error: "Authentication required." };
+    }
+
+    const result = await updateOwnUserSettings(user.id, input);
+
+    if (result.error) {
+      setError(result.error);
+      return result;
+    }
+
+    if (typeof input.keep_me_signed_in === "boolean") {
+      applyKeepSignedInPreference(input.keep_me_signed_in);
+    }
+
+    setError(null);
+    await refreshSettings();
+    return { error: null };
+  };
+
   const value: AuthContextValue = {
     session,
     user,
     profile,
+    settings,
     status,
     error,
     signIn,
     signUp,
     signOut,
-    refreshProfile
+    refreshProfile,
+    refreshSettings,
+    updateSettings
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

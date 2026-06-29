@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { readKeepSignedInPreference } from "../../lib/authSessionPreference";
 import { isSupabaseConfigured } from "../../lib/env";
 import { useAuth } from "../../providers/AuthProvider";
 import { AuthMessage } from "./AuthMessage";
@@ -13,7 +14,11 @@ const loginSchema = z.object({
 export const LoginForm = () => {
   const navigate = useNavigate();
   const { signIn, error } = useAuth();
-  const [formState, setFormState] = useState({ email: "", password: "" });
+  const [formState, setFormState] = useState({
+    email: "",
+    password: "",
+    keepMeSignedIn: readKeepSignedInPreference()
+  });
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
 
@@ -28,7 +33,10 @@ export const LoginForm = () => {
 
     setFieldError(null);
     setSubmitting(true);
-    const result = await signIn(parsed.data);
+    const result = await signIn({
+      ...parsed.data,
+      keepMeSignedIn: formState.keepMeSignedIn
+    });
     setSubmitting(false);
 
     if (!result.error) {
@@ -74,6 +82,21 @@ export const LoginForm = () => {
           type="password"
           value={formState.password}
         />
+      </label>
+
+      <label className="auth-checkbox">
+        <input
+          checked={formState.keepMeSignedIn}
+          name="keep-me-signed-in"
+          onChange={(event) =>
+            setFormState((current) => ({
+              ...current,
+              keepMeSignedIn: event.target.checked
+            }))
+          }
+          type="checkbox"
+        />
+        <span>Keep me signed in</span>
       </label>
 
       <button className="solid-button solid-button--large" disabled={isSubmitting} type="submit">

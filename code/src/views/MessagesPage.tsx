@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { ProfileAvatar } from "../components/shared/ProfileAvatar";
 import {
   fetchDirectMessages,
   fetchInboxThreads,
@@ -21,14 +22,6 @@ const formatDate = (value: string | null) =>
         minute: "2-digit"
       }).format(new Date(value))
     : "No messages yet";
-
-const getInitials = (fullName: string) =>
-  fullName
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
 export const MessagesPage = () => {
   const { user } = useAuth();
@@ -235,13 +228,12 @@ export const MessagesPage = () => {
                   type="button"
                 >
                   <div className="messages-thread-card__avatar">
-                    {thread.peer_avatar_url ? (
-                      <img alt={thread.peer_full_name} className="feed-card__avatar" src={thread.peer_avatar_url} />
-                    ) : (
-                      <div className="feed-card__avatar feed-card__avatar--fallback">
-                        {getInitials(thread.peer_full_name)}
-                      </div>
-                    )}
+                    <ProfileAvatar
+                      alt={thread.peer_full_name}
+                      className="feed-card__avatar"
+                      name={thread.peer_full_name}
+                      src={thread.peer_avatar_url}
+                    />
                   </div>
                   <div className="messages-thread-card__body">
                     <div className="messages-thread-card__row">
@@ -282,17 +274,12 @@ export const MessagesPage = () => {
                   </button>
 
                   <div className="feed-card__identity">
-                    {activeThread.peer_avatar_url ? (
-                      <img
-                        alt={activeThread.peer_full_name}
-                        className="feed-card__avatar"
-                        src={activeThread.peer_avatar_url}
-                      />
-                    ) : (
-                      <div className="feed-card__avatar feed-card__avatar--fallback">
-                        {getInitials(activeThread.peer_full_name)}
-                      </div>
-                    )}
+                    <ProfileAvatar
+                      alt={activeThread.peer_full_name}
+                      className="feed-card__avatar"
+                      name={activeThread.peer_full_name}
+                      src={activeThread.peer_avatar_url}
+                    />
 
                     <div>
                       <strong className="profile-name-row">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ProfileAvatar } from "../components/shared/ProfileAvatar";
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -18,14 +19,6 @@ const formatDate = (value: string) =>
     hour: "numeric",
     minute: "2-digit"
   }).format(new Date(value));
-
-const getInitials = (value: string | null) =>
-  (value ?? "User")
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
 export const NotificationsPage = () => {
   const { user } = useAuth();
@@ -155,13 +148,12 @@ export const NotificationsPage = () => {
               type="button"
             >
               <div className="notification-card__avatar">
-                {item.actor_avatar_url ? (
-                  <img alt={item.actor_full_name ?? "User"} className="feed-card__avatar" src={item.actor_avatar_url} />
-                ) : (
-                  <div className="feed-card__avatar feed-card__avatar--fallback">
-                    {getInitials(item.actor_full_name)}
-                  </div>
-                )}
+                <ProfileAvatar
+                  alt={item.actor_full_name ?? "User"}
+                  className="feed-card__avatar"
+                  name={item.actor_full_name ?? item.actor_username ?? "User"}
+                  src={item.actor_avatar_url}
+                />
               </div>
                 <div className="notification-card__body">
                   <div className="notification-card__row">

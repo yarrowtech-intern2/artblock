@@ -37,6 +37,7 @@ Production-oriented starter for a mobile-first creator platform using React, Typ
    - [supabase/migrations/20260331_feed_posts.sql](/e:/s15/Projects/artblock-final/code/supabase/migrations/20260331_feed_posts.sql)
    - [supabase/migrations/20260331_rich_feed_engagement.sql](/e:/s15/Projects/artblock-final/code/supabase/migrations/20260331_rich_feed_engagement.sql)
    - [supabase/migrations/20260624_creator_verification_and_payments.sql](/e:/s15/Projects/artblock-final/code/supabase/migrations/20260624_creator_verification_and_payments.sql)
+   - [supabase/migrations/20260629_user_settings_and_account_controls.sql](/e:/s15/Projects/artblock-final/code/supabase/migrations/20260629_user_settings_and_account_controls.sql)
 
 4. Deploy the Supabase Edge Functions and set these function secrets:
 
@@ -51,6 +52,7 @@ Production-oriented starter for a mobile-first creator platform using React, Typ
    Functions added in this repo:
 
    - `create-artist-verification-order`
+   - `manage-account-lifecycle`
    - `verify-artist-verification-payment`
 
 5. Start the app:

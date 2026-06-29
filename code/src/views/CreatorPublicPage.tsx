@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ProfileAvatar } from "../components/shared/ProfileAvatar";
 import { getIdentityNameClass } from "../lib/identity";
 import { fetchPublicCreatorProfile } from "../lib/profile";
 import type { PublicCreatorProfile } from "../types/auth";
@@ -57,18 +58,12 @@ export const CreatorPublicPage = () => {
     <section className="public-page">
       <div className="public-hero">
         <div className="public-hero__identity">
-          {creator.avatar_url ? (
-            <img alt={creator.full_name} className="public-avatar" src={creator.avatar_url} />
-          ) : (
-            <div className="public-avatar public-avatar--fallback">
-              {creator.full_name
-                .split(" ")
-                .map((part) => part[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
-            </div>
-          )}
+          <ProfileAvatar
+            alt={creator.full_name}
+            className="public-avatar"
+            name={creator.full_name}
+            src={creator.avatar_url}
+          />
 
           <div className="public-hero__copy">
             <span className="section-heading__eyebrow">Creator Profile</span>

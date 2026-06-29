@@ -1,5 +1,5 @@
 import type { Session, User } from "@supabase/supabase-js";
-import type { AppRole, FeedPostType, NotificationType } from "../lib/supabase.types";
+import type { AppRole, FeedPostType, NotificationType, ProfileGender } from "../lib/supabase.types";
 
 export type Profile = {
   id: string;
@@ -11,6 +11,8 @@ export type Profile = {
   bio: string | null;
   username: string | null;
   avatar_url: string | null;
+  cover_url: string | null;
+  gender: ProfileGender | null;
   website: string | null;
   location: string | null;
   created_at: string;
@@ -36,12 +38,34 @@ export type PublicCreatorProfile = {
   verified_artist_at: string | null;
   username: string | null;
   avatar_url: string | null;
+  cover_url: string | null;
+  gender: ProfileGender | null;
   bio: string | null;
   website: string | null;
   location: string | null;
   headline: string | null;
   about: string | null;
   featured_quote: string | null;
+  profile_visibility: ProfileVisibility;
+};
+
+export type ProfileVisibility = "public" | "members" | "private";
+export type InteractionPermission = "everyone" | "followers" | "nobody";
+
+export type UserSettings = {
+  profile_id: string;
+  keep_me_signed_in: boolean;
+  profile_visibility: ProfileVisibility;
+  message_permissions: InteractionPermission;
+  comment_permissions: InteractionPermission;
+  notify_new_followers: boolean;
+  notify_new_subscribers: boolean;
+  notify_new_messages: boolean;
+  notify_post_likes: boolean;
+  notify_post_comments: boolean;
+  deactivated_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type PublicProfile = {
@@ -51,6 +75,8 @@ export type PublicProfile = {
   verified_artist_at: string | null;
   username: string | null;
   avatar_url: string | null;
+  cover_url: string | null;
+  gender: ProfileGender | null;
   bio: string | null;
   website: string | null;
   location: string | null;
@@ -59,6 +85,9 @@ export type PublicProfile = {
   headline: string | null;
   about: string | null;
   featured_quote: string | null;
+  profile_visibility: ProfileVisibility;
+  message_permissions: InteractionPermission;
+  viewer_can_message: boolean;
   follower_count: number;
   following_count: number;
   subscriber_count: number;
@@ -107,6 +136,8 @@ export type FeedPost = {
   avatar_url: string | null;
   creator_slug: string | null;
   headline: string | null;
+  comment_permissions: InteractionPermission;
+  viewer_can_comment: boolean;
   like_count: number;
   comment_count: number;
   liked_by_viewer: boolean;
@@ -166,20 +197,41 @@ export type AuthContextValue = {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  settings: UserSettings | null;
   status: AuthStatus;
   error: string | null;
   signIn: (input: SignInInput) => Promise<{ error: string | null }>;
   signUp: (input: SignUpInput) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshSettings: () => Promise<void>;
+  updateSettings: (
+    input: Partial<
+      Pick<
+        UserSettings,
+        | "keep_me_signed_in"
+        | "profile_visibility"
+        | "message_permissions"
+        | "comment_permissions"
+        | "notify_new_followers"
+        | "notify_new_subscribers"
+        | "notify_new_messages"
+        | "notify_post_likes"
+        | "notify_post_comments"
+      >
+    >
+  ) => Promise<{ error: string | null }>;
 };
 
 export type SignInInput = {
   email: string;
   password: string;
+  keepMeSignedIn: boolean;
 };
 
-export type SignUpInput = SignInInput & {
+export type SignUpInput = {
+  email: string;
+  password: string;
   fullName: string;
   role: AppRole;
   acceptedTerms: boolean;

@@ -53,8 +53,16 @@ export const router = createBrowserRouter([
             lazy: lazyRoute(() => import("./views/MessagesPage"), "MessagesPage")
           },
           {
+            path: "/shorts",
+            lazy: lazyRoute(() => import("./views/ShortsPage"), "ShortsPage")
+          },
+          {
             path: "/notifications",
             lazy: lazyRoute(() => import("./views/NotificationsPage"), "NotificationsPage")
+          },
+          {
+            path: "/settings",
+            lazy: lazyRoute(() => import("./views/SettingsPage"), "SettingsPage")
           }
         ]
       }

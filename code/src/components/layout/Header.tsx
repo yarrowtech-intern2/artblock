@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
+import { ProfileAvatar } from "../shared/ProfileAvatar";
 import { ThemeSheet } from "../settings/ThemeSheet";
 import {
   fetchUnreadMessageCount,
@@ -8,6 +9,10 @@ import {
 import { getSupabaseClient } from "../../lib/supabase";
 import { useAuth } from "../../providers/AuthProvider";
 import { useTheme } from "../../providers/ThemeProvider";
+import notificationBlackIcon from "../../public/icons/svg/notification-black.svg";
+import notificationWhiteIcon from "../../public/icons/svg/notification-white.svg";
+import themeBlackIcon from "../../public/icons/svg/theme-black.svg";
+import themeWhiteIcon from "../../public/icons/svg/theme-white.svg";
 import logoBlack from "../../public/logo/logo-black-transparent.png";
 import logoWhite from "../../public/logo/logo-white-transparent.png";
 
@@ -16,30 +21,24 @@ const marketingAnchorLinks = [
   { label: "Features", href: "#features" }
 ];
 
-const PaletteIcon = () => (
-  <svg fill="none" height="20" viewBox="0 0 24 24" width="20">
-    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.75" />
-    <circle cx="8.5" cy="10" r="1.5" fill="currentColor" />
-    <circle cx="15.5" cy="10" r="1.5" fill="currentColor" />
-    <circle cx="12" cy="15" r="1.5" fill="currentColor" />
-  </svg>
-);
-
 export const Header = () => {
   const [isMenuOpen, setMenuOpen] = useState(false);
   const [isThemeOpen, setThemeOpen] = useState(false);
   const [isLandingScrolled, setLandingScrolled] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const { status, profile, signOut, user } = useAuth();
+  const { status, profile, user } = useAuth();
   const location = useLocation();
   const homeTarget = status === "authenticated" ? "/feed" : "/";
+  const profileTarget = user?.id ? `/profiles/${user.id}` : "/dashboard";
   const isAuthed = status === "authenticated";
   const isLanding =
     !isAuthed &&
     (location.pathname === "/" || location.pathname === "/classic-home");
   const { theme } = useTheme();
   const brandLogo = theme === "light" ? logoBlack : logoWhite;
+  const themeIcon = theme === "light" ? themeBlackIcon : themeWhiteIcon;
+  const notificationIcon = theme === "light" ? notificationBlackIcon : notificationWhiteIcon;
 
   useEffect(() => {
     if (!isLanding) {
@@ -103,15 +102,6 @@ export const Header = () => {
     };
   }, [isAuthed, user?.id]);
 
-  const initials = profile?.full_name
-    ? profile.full_name
-        .split(" ")
-        .map((p) => p[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : "?";
-
   return (
     <>
       <header
@@ -139,7 +129,7 @@ export const Header = () => {
               onClick={() => setThemeOpen(true)}
               type="button"
             >
-              <PaletteIcon />
+              <img alt="" aria-hidden="true" className="header-theme-btn__icon" src={themeIcon} />
             </button>
           ) : null}
 
@@ -150,15 +140,12 @@ export const Header = () => {
               className="header-avatar-btn"
               to={`/profiles/${user?.id ?? ""}`}
             >
-              {profile?.avatar_url ? (
-                <img
-                  alt={profile.full_name}
-                  className="header-avatar-btn__img"
-                  src={profile.avatar_url}
-                />
-              ) : (
-                <span className="header-avatar-btn__fallback">{initials}</span>
-              )}
+              <ProfileAvatar
+                alt={profile?.full_name ?? "Your profile"}
+                className="header-avatar-btn__img"
+                name={profile?.full_name ?? user?.email ?? "ArtBlock user"}
+                src={profile?.avatar_url}
+              />
             </Link>
           ) : (
             <button
@@ -189,14 +176,9 @@ export const Header = () => {
                 className={({ isActive }) =>
                   `site-nav__link${isActive ? " site-nav__link--active" : ""}`
                 }
-                to="/notifications"
+                to="/shorts"
               >
-                Notifications
-                {unreadNotifications > 0 ? (
-                  <span className="site-nav__count">
-                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
-                  </span>
-                ) : null}
+                Shorts
               </NavLink>
               <NavLink
                 className={({ isActive }) =>
@@ -215,11 +197,43 @@ export const Header = () => {
                 className={({ isActive }) =>
                   `site-nav__link${isActive ? " site-nav__link--active" : ""}`
                 }
-                to="/dashboard"
+                to={profileTarget}
               >
-                {profile?.role === "creator" ? "Studio" : "Account"}
+                Profile
+              </NavLink>
+              <NavLink
+                className={({ isActive }) =>
+                  `site-nav__link${isActive ? " site-nav__link--active" : ""}`
+                }
+                to="/settings"
+              >
+                Settings
               </NavLink>
               <div className="site-nav__actions">
+                <NavLink
+                  aria-label="Notifications"
+                  className={({ isActive }) =>
+                    `header-theme-btn header-theme-btn--nav header-theme-btn--link${
+                      isActive ? " header-theme-btn--active" : ""
+                    }`
+                  }
+                  title="Notifications"
+                  to="/notifications"
+                >
+                  <span className="header-theme-btn__icon-shell">
+                    <img
+                      alt=""
+                      aria-hidden="true"
+                      className="header-theme-btn__icon"
+                      src={notificationIcon}
+                    />
+                    {unreadNotifications > 0 ? (
+                      <span className="header-theme-btn__badge">
+                        {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                      </span>
+                    ) : null}
+                  </span>
+                </NavLink>
                 <button
                   aria-label="Appearance settings"
                   className="header-theme-btn header-theme-btn--nav"
@@ -227,14 +241,7 @@ export const Header = () => {
                   type="button"
                   title="Change theme"
                 >
-                  <PaletteIcon />
-                </button>
-                <button
-                  className="ghost-button"
-                  onClick={() => void signOut()}
-                  type="button"
-                >
-                  Logout
+                  <img alt="" aria-hidden="true" className="header-theme-btn__icon" src={themeIcon} />
                 </button>
               </div>
             </nav>

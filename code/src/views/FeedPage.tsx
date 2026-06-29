@@ -2,20 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { PostComposer } from "../components/dashboard/PostComposer";
 import { FeedCard } from "../components/feed/FeedCard";
+import { FeedTopTabs } from "../components/feed/FeedTopTabs";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { getIdentityNameClass } from "../lib/identity";
 import { fetchFeedPosts, type FeedScope } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
 import type { FeedPost } from "../types/auth";
-
-const feedTabs: { label: string; value: FeedScope }[] = [
-  { label: "For You", value: "for-you" },
-  { label: "Following", value: "following" },
-  { label: "Subscribed", value: "subscribed" },
-  { label: "Saved", value: "saved" }
-];
+import { useSearchParams } from "react-router-dom";
 
 const FEED_PAGE_SIZE = 6;
+const isFeedScope = (value: string | null): value is FeedScope =>
+  value === "for-you" || value === "following" || value === "subscribed" || value === "saved";
 
 const FeedSkeleton = () => (
   <div className="feed-skeleton">
@@ -39,14 +36,24 @@ const FeedSkeleton = () => (
 
 export const FeedPage = () => {
   const { profile, user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialRouteScope = searchParams.get("tab");
   const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [feedScope, setFeedScope] = useState<FeedScope>("for-you");
+  const [feedScope, setFeedScope] = useState<FeedScope>(
+    isFeedScope(initialRouteScope) ? initialRouteScope : "for-you"
+  );
   const [isLoading, setLoading] = useState(true);
   const [isLoadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const routeScope = searchParams.get("tab");
+    const nextScope = isFeedScope(routeScope) ? routeScope : "for-you";
+    setFeedScope(nextScope);
+  }, [searchParams]);
 
   const loadFeed = async ({
     scope = feedScope,
@@ -148,20 +155,22 @@ export const FeedPage = () => {
         {/* Main feed column */}
         <div className="feed-main">
           {/* Compact tab bar */}
-          <div className="feed-tabs" role="tablist">
-            {feedTabs.map((tab) => (
-              <button
-                aria-selected={feedScope === tab.value}
-                className={`feed-tab${feedScope === tab.value ? " feed-tab--active" : ""}`}
-                key={tab.value}
-                onClick={() => setFeedScope(tab.value)}
-                role="tab"
-                type="button"
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          <FeedTopTabs
+            activeFeedScope={feedScope}
+            onFeedScopeChange={(scope) => {
+              setFeedScope(scope);
+              const nextParams = new URLSearchParams(searchParams);
+
+              if (scope === "for-you") {
+                nextParams.delete("tab");
+              } else {
+                nextParams.set("tab", scope);
+              }
+
+              setSearchParams(nextParams, { replace: true });
+            }}
+            sticky={false}
+          />
 
           {/* Creator post composer */}
           {profile?.role === "creator" && user ? (

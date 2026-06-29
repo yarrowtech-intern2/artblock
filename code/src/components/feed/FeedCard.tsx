@@ -4,6 +4,7 @@ import { getPostContentText, getRichPostStyleVars } from "../../lib/postRichCont
 import { Link } from "react-router-dom";
 import { addComment, renderFormattedText, togglePostLike, togglePostSave, voteOnPoll } from "../../lib/profile";
 import type { FeedPost } from "../../types/auth";
+import { ProfileAvatar } from "../shared/ProfileAvatar";
 import { VerifiedArtistBadge } from "../shared/VerifiedArtistBadge";
 
 type FeedCardProps = {
@@ -85,17 +86,14 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
   const [localLikeCount, setLocalLikeCount] = useState(post.like_count);
   const [localSaved, setLocalSaved] = useState(post.saved_by_viewer);
 
-  const initials = post.full_name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   const totalVotes = post.poll_options.reduce((sum, option) => sum + option.vote_count, 0);
   const canRevealPollResults = Boolean(post.voted_option_id) || totalVotes > 0;
   const postContent = getPostContentText(post.title, post.body);
   const postTextStyle = getRichPostStyleVars(postContent.style, post.post_type === "text") as CSSProperties;
+  const commentRestrictionMessage =
+    post.comment_permissions === "followers"
+      ? "Only followers can comment on this post."
+      : "Comments are turned off for this post.";
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -138,6 +136,10 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
 
   const handleCommentSubmit = async (event: { preventDefault(): void }) => {
     event.preventDefault();
+    if (!post.viewer_can_comment) {
+      setError(commentRestrictionMessage);
+      return;
+    }
     const trimmed = commentDraft.trim();
     if (!trimmed) return;
     setMutating(true);
@@ -154,11 +156,12 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
       {/* Header: avatar + author info */}
       <header className="feed-card__header">
         <Link className="feed-card__identity feed-card__identity--link" to={`/profiles/${post.author_id}`}>
-          {post.avatar_url ? (
-            <img alt={post.full_name} className="feed-card__avatar" src={post.avatar_url} />
-          ) : (
-            <div className="feed-card__avatar feed-card__avatar--fallback">{initials}</div>
-          )}
+          <ProfileAvatar
+            alt={post.full_name}
+            className="feed-card__avatar"
+            name={post.full_name}
+            src={post.avatar_url}
+          />
           <div className="feed-card__identity-text">
             <strong className="feed-card__name">
               <span className={getIdentityNameClass(post.author_role)}>{post.full_name}</span>
@@ -313,22 +316,27 @@ export const FeedCard = ({ post, viewerId, onRefresh, extraActions }: FeedCardPr
             <div className="feed-comments__input-row">
               <input
                 autoFocus
+                disabled={!post.viewer_can_comment}
                 maxLength={500}
                 onChange={(event) => setCommentDraft(event.target.value)}
-                placeholder="Add a comment…"
+                placeholder={post.viewer_can_comment ? "Add a comment..." : commentRestrictionMessage}
                 type="text"
                 value={commentDraft}
               />
               <button
                 aria-label="Post comment"
                 className="feed-comments__send"
-                disabled={isMutating || !commentDraft.trim()}
+                disabled={isMutating || !commentDraft.trim() || !post.viewer_can_comment}
                 type="submit"
               >
                 <SendIcon />
               </button>
             </div>
           </form>
+
+          {!post.viewer_can_comment ? (
+            <p className="feed-comments__empty">{commentRestrictionMessage}</p>
+          ) : null}
 
           <div className="feed-comments__list">
             {post.comments.length === 0 ? (

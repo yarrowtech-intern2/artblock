@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CreatorAccessPanel } from "../components/dashboard/CreatorAccessPanel";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { CreatorStudio } from "../components/dashboard/CreatorStudio";
 import { PostComposer } from "../components/dashboard/PostComposer";
 import { ProfileEditor } from "../components/dashboard/ProfileEditor";
@@ -12,6 +12,8 @@ import type { CreatorProfile } from "../types/auth";
 
 export const DashboardPage = () => {
   const { profile, user, refreshProfile, signOut } = useAuth();
+  const location = useLocation();
+  const postingSectionRef = useRef<HTMLDivElement | null>(null);
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
   const [isLoadingCreatorProfile, setLoadingCreatorProfile] = useState(false);
 
@@ -37,6 +39,18 @@ export const DashboardPage = () => {
     void loadCreatorProfile();
   }, [user?.id, profile?.role]);
 
+  useEffect(() => {
+    if (location.hash !== "#posting" || profile?.role !== "creator") {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      postingSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.hash, profile?.role]);
+
   if (!profile || !user) {
     return null;
   }
@@ -46,15 +60,17 @@ export const DashboardPage = () => {
       <header className="dashboard-page__header">
         <div>
           <span className="section-heading__eyebrow">Dashboard</span>
-          <h1>{profile.role === "creator" ? "Creator Hub" : "Visitor Hub"}</h1>
+          <h1>{profile.role === "creator" ? "Creator Dashboard" : "Dashboard"}</h1>
           <p>
-            Signed in as <span className={getIdentityNameClass(profile.role)}>{profile.full_name}</span>. Complete your account setup before adding deeper feed,
-            media, and community modules.
+            Signed in as <span className={getIdentityNameClass(profile.role)}>{profile.full_name}</span>
           </p>
         </div>
         <div className="dashboard-page__actions">
           <Link className="ghost-button" to={`/profiles/${user.id}`}>
             View Profile
+          </Link>
+          <Link className="ghost-button" to="/settings">
+            Settings
           </Link>
           {profile.role === "creator" && creatorProfile?.is_published ? (
             <Link className="ghost-button" to={`/creators/${creatorProfile.slug}`}>
@@ -96,7 +112,9 @@ export const DashboardPage = () => {
 
         {profile.role === "creator" ? (
           <>
-            <PostComposer onPublished={loadCreatorProfile} userId={user.id} />
+            <div className="dashboard-anchor-target" id="posting" ref={postingSectionRef}>
+              <PostComposer onPublished={loadCreatorProfile} userId={user.id} />
+            </div>
             <CreatorStudio
               creatorProfile={creatorProfile}
               defaultName={profile.full_name}

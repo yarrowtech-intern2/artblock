@@ -1,17 +1,58 @@
-import { useEffect, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { CampaignCard } from "../components/feed/CampaignCard";
 import { FeedCard } from "../components/feed/FeedCard";
 import { FeedTopTabs } from "../components/feed/FeedTopTabs";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
+import { fetchActiveCampaigns } from "../lib/admin";
 import { getIdentityNameClass } from "../lib/identity";
 import { deletePost, fetchFeedPosts, type FeedScope } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
+import type { Campaign } from "../types/admin";
 import type { FeedPost } from "../types/auth";
 import { useSearchParams } from "react-router-dom";
 
 const FEED_PAGE_SIZE = 6;
 const isFeedScope = (value: string | null): value is FeedScope =>
   value === "for-you" || value === "following" || value === "subscribed" || value === "saved";
+
+type FeedListItem =
+  | { type: "post"; post: FeedPost }
+  | { type: "campaign"; campaign: Campaign; key: string };
+
+const hashString = (value: string) =>
+  value.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+
+const buildFeedItems = (posts: FeedPost[], campaigns: Campaign[]): FeedListItem[] => {
+  const eligibleCampaigns = campaigns.filter((campaign) => campaign.feed_enabled);
+
+  if (eligibleCampaigns.length === 0 || posts.length < 4) {
+    return posts.map((post) => ({ type: "post", post }));
+  }
+
+  const items: FeedListItem[] = [];
+  let nextInsertionIndex = 4 + (hashString(posts[0]?.id ?? "feed") % 3);
+  let campaignCursor = 0;
+
+  posts.forEach((post, index) => {
+    items.push({ type: "post", post });
+
+    if (index + 1 === nextInsertionIndex) {
+      const campaign = eligibleCampaigns[campaignCursor % eligibleCampaigns.length];
+
+      items.push({
+        type: "campaign",
+        campaign,
+        key: `${campaign.id}-${post.id}-${index}`
+      });
+
+      campaignCursor += 1;
+      nextInsertionIndex += 5 + (hashString(post.id) % 4);
+    }
+  });
+
+  return items;
+};
 
 const FeedSkeleton = () => (
   <div className="feed-skeleton">
@@ -47,13 +88,92 @@ export const FeedPage = () => {
   const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignRotationIndex, setCampaignRotationIndex] = useState(0);
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
+
+  const railCampaigns = useMemo(
+    () => campaigns.filter((campaign) => campaign.desktop_enabled),
+    [campaigns]
+  );
+  const desktopCampaign = railCampaigns.length > 0 ? railCampaigns[campaignRotationIndex % railCampaigns.length] : null;
+  const filteredPosts = useMemo(() => {
+    if (!normalizedSearchQuery) {
+      return posts;
+    }
+
+    return posts.filter((post) => {
+      const searchHaystack = [
+        post.full_name,
+        post.username,
+        post.headline,
+        post.title,
+        post.body
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchHaystack.includes(normalizedSearchQuery);
+    });
+  }, [normalizedSearchQuery, posts]);
+  const feedItems = useMemo(() => buildFeedItems(filteredPosts, campaigns), [filteredPosts, campaigns]);
+  const dashboardTarget = profile?.role === "admin" ? "/admin" : "/dashboard";
+  const dashboardLabel =
+    profile?.role === "creator"
+      ? "Open Studio"
+      : profile?.role === "admin"
+        ? "Admin Console"
+        : "Open Account";
+  const roleLabel =
+    profile?.role === "creator"
+      ? "Creator"
+      : profile?.role === "admin"
+        ? "Admin"
+        : "Visitor";
 
   useEffect(() => {
     const routeScope = searchParams.get("tab");
     const nextScope = isFeedScope(routeScope) ? routeScope : "for-you";
     setFeedScope(nextScope);
+    setSearchQuery(searchParams.get("q") ?? "");
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!user) {
+      setCampaigns([]);
+      return;
+    }
+
+    const loadCampaigns = async () => {
+      const result = await fetchActiveCampaigns();
+
+      if (!result.error) {
+        setCampaigns(result.data);
+      }
+    };
+
+    void loadCampaigns();
+  }, [user?.id]);
+
+  useEffect(() => {
+    setCampaignRotationIndex(0);
+  }, [railCampaigns.length]);
+
+  useEffect(() => {
+    if (railCampaigns.length < 2) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setCampaignRotationIndex((current) => (current + 1) % railCampaigns.length);
+    }, 7000);
+
+    return () => window.clearInterval(timer);
+  }, [railCampaigns.length]);
 
   const loadFeed = async ({
     scope = feedScope,
@@ -115,7 +235,9 @@ export const FeedPage = () => {
   }, [feedScope, hasMore, isLoading, isLoadingMore, page, user?.id]);
 
   const emptyFeedCopy =
-    feedScope === "following"
+    normalizedSearchQuery
+      ? `No posts or creators matched "${deferredSearchQuery.trim()}".`
+      : feedScope === "following"
       ? "Follow a few profiles to build a relationship-based feed."
       : feedScope === "subscribed"
         ? "Subscribe to creators to unlock a dedicated subscription stream."
@@ -138,18 +260,19 @@ export const FeedPage = () => {
             </h2>
             <p>{profile?.bio ?? "Set your profile details to improve how you appear across the platform."}</p>
             <div className="feed-rail-meta">
-              <span>{profile?.role === "creator" ? "Creator" : "Visitor"}</span>
+              <span>{roleLabel}</span>
               <span>{profile?.username ? `@${profile.username}` : "No username yet"}</span>
             </div>
             <div className="feed-rail-actions">
               <Link className="ghost-button" to={`/profiles/${user?.id ?? ""}`}>
                 View Profile
               </Link>
-              <Link className="ghost-button" to="/dashboard">
-                {profile?.role === "creator" ? "Open Studio" : "Open Account"}
+              <Link className="ghost-button" to={dashboardTarget}>
+                {dashboardLabel}
               </Link>
             </div>
           </div>
+          {desktopCampaign ? <CampaignCard campaign={desktopCampaign} mode="rail" /> : null}
         </aside>
 
         {/* Main feed column */}
@@ -169,6 +292,19 @@ export const FeedPage = () => {
 
               setSearchParams(nextParams, { replace: true });
             }}
+            onSearchChange={(value) => {
+              setSearchQuery(value);
+              const nextParams = new URLSearchParams(searchParams);
+
+              if (value.trim()) {
+                nextParams.set("q", value);
+              } else {
+                nextParams.delete("q");
+              }
+
+              setSearchParams(nextParams, { replace: true });
+            }}
+            searchValue={searchQuery}
             sticky={false}
           />
 
@@ -176,7 +312,7 @@ export const FeedPage = () => {
 
           {isLoading ? <FeedSkeleton /> : null}
 
-          {!isLoading && posts.length === 0 ? (
+          {!isLoading && filteredPosts.length === 0 ? (
             <div className="empty-feed">
               <div className="empty-feed__icon" aria-hidden="true">
                 <svg fill="none" height="40" viewBox="0 0 24 24" width="40">
@@ -189,41 +325,45 @@ export const FeedPage = () => {
               <span className="section-heading__eyebrow">Nothing here yet</span>
               <h2>The feed is empty.</h2>
               <p>{emptyFeedCopy}</p>
-              <Link className="solid-button" to="/dashboard">
-                {profile?.role === "creator" ? "Open Studio" : "Open Account"}
+              <Link className="solid-button" to={dashboardTarget}>
+                {dashboardLabel}
               </Link>
             </div>
           ) : null}
 
           <div className="feed-grid">
-            {posts.map((post) => (
-              <FeedCard
-                canDelete={post.author_id === user?.id}
-                isDeleting={deletingPostId === post.id}
-                key={post.id}
-                onDelete={async (targetPost) => {
-                  if (!user) {
-                    return "You need to sign in to delete posts.";
-                  }
+            {feedItems.map((item) =>
+              item.type === "campaign" ? (
+                <CampaignCard campaign={item.campaign} key={item.key} mode="inline" />
+              ) : (
+                <FeedCard
+                  canDelete={item.post.author_id === user?.id}
+                  isDeleting={deletingPostId === item.post.id}
+                  key={item.post.id}
+                  onDelete={async (targetPost) => {
+                    if (!user) {
+                      return "You need to sign in to delete posts.";
+                    }
 
-                  setDeletingPostId(targetPost.id);
-                  setError(null);
-                  const result = await deletePost(targetPost.id, user.id);
-                  setDeletingPostId(null);
+                    setDeletingPostId(targetPost.id);
+                    setError(null);
+                    const result = await deletePost(targetPost.id, user.id);
+                    setDeletingPostId(null);
 
-                  if (result.error) {
-                    setError(result.error);
-                    return result.error;
-                  }
+                    if (result.error) {
+                      setError(result.error);
+                      return result.error;
+                    }
 
-                  setPosts((current) => current.filter((item) => item.id !== targetPost.id));
-                  return null;
-                }}
-                onRefresh={() => loadFeed({ scope: feedScope, page: 0, append: false })}
-                post={post}
-                viewerId={user?.id ?? ""}
-              />
-            ))}
+                    setPosts((current) => current.filter((entry) => entry.id !== targetPost.id));
+                    return null;
+                  }}
+                  onRefresh={() => loadFeed({ scope: feedScope, page: 0, append: false })}
+                  post={item.post}
+                  viewerId={user?.id ?? ""}
+                />
+              )
+            )}
           </div>
 
           {!isLoading && posts.length > 0 ? <div className="feed-sentinel" ref={sentinelRef} /> : null}
@@ -236,7 +376,7 @@ export const FeedPage = () => {
             </div>
           ) : null}
 
-          {!isLoading && !hasMore && posts.length > 0 ? (
+          {!isLoading && !hasMore && filteredPosts.length > 0 ? (
             <div className="feed-end-cap">
               <span>·</span>
               <span className="section-heading__eyebrow">You're all caught up</span>
@@ -274,11 +414,11 @@ export const FeedPage = () => {
               <div className="feed-rail-stats">
                 <article>
                   <span>Posts</span>
-                  <strong>{posts.length}</strong>
+                  <strong>{filteredPosts.length}</strong>
                 </article>
                 <article>
                   <span>Creators</span>
-                  <strong>{new Set(posts.map((p) => p.author_id)).size}</strong>
+                  <strong>{new Set(filteredPosts.map((p) => p.author_id)).size}</strong>
                 </article>
               </div>
             </div>
@@ -288,8 +428,8 @@ export const FeedPage = () => {
             <span className="section-heading__eyebrow">Quick Links</span>
             <div className="feed-rail-actions">
               <Link className="ghost-button" to="/messages">Messages</Link>
-              <Link className="ghost-button" to="/dashboard">
-                {profile?.role === "creator" ? "Profile Studio" : "Account"}
+              <Link className="ghost-button" to={dashboardTarget}>
+                {profile?.role === "creator" ? "Profile Studio" : profile?.role === "admin" ? "Admin Console" : "Account"}
               </Link>
             </div>
           </div>

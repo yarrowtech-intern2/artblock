@@ -41,6 +41,10 @@ export const router = createBrowserRouter([
         element: <ProtectedLayout />,
         children: [
           {
+            path: "/admin",
+            lazy: lazyRoute(() => import("./views/AdminPage"), "AdminPage")
+          },
+          {
             path: "/feed",
             lazy: lazyRoute(() => import("./views/FeedPage"), "FeedPage")
           },

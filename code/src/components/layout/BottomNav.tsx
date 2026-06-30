@@ -4,31 +4,19 @@ import {
   fetchUnreadMessageCount,
   fetchUnreadNotificationsCount
 } from "../../lib/profile";
+import {
+  BellNavIcon,
+  HomeNavIcon,
+  MessageNavIcon,
+  ReelsNavIcon
+} from "../shared/NavIcons";
 import { getSupabaseClient } from "../../lib/supabase";
 import { useAuth } from "../../providers/AuthProvider";
-import { useTheme } from "../../providers/ThemeProvider";
-import homeBlackIcon from "../../public/icons/svg/home-black.svg";
-import homeWhiteIcon from "../../public/icons/svg/home-white.svg";
-import messageBlackIcon from "../../public/icons/svg/message-black.svg";
-import messageWhiteIcon from "../../public/icons/svg/message-white.svg";
-import notificationBlackIcon from "../../public/icons/svg/notification-black.svg";
-import notificationWhiteIcon from "../../public/icons/svg/notification-white.svg";
-import reelsBlackIcon from "../../public/icons/svg/reels-black.svg";
-import reelsWhiteIcon from "../../public/icons/svg/reels-white.svg";
 
 export const BottomNav = () => {
   const { user } = useAuth();
-  const { theme } = useTheme();
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const isDarkTheme = theme === "dark" || theme === "amoled";
-
-  const iconSrc = {
-    home: isDarkTheme ? homeWhiteIcon : homeBlackIcon,
-    message: isDarkTheme ? messageWhiteIcon : messageBlackIcon,
-    notification: isDarkTheme ? notificationWhiteIcon : notificationBlackIcon,
-    reels: isDarkTheme ? reelsWhiteIcon : reelsBlackIcon
-  };
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -96,13 +84,13 @@ export const BottomNav = () => {
         {navItem(
           "/feed",
           "Feed",
-          <img alt="" aria-hidden="true" className="bottom-nav__icon-image" src={iconSrc.home} />
+          <HomeNavIcon aria-hidden="true" className="bottom-nav__icon-image" />
         )}
 
         {navItem(
           "/shorts",
           "Shorts",
-          <img alt="" aria-hidden="true" className="bottom-nav__icon-image" src={iconSrc.reels} />
+          <ReelsNavIcon aria-hidden="true" className="bottom-nav__icon-image" />
         )}
 
         <NavLink
@@ -121,24 +109,14 @@ export const BottomNav = () => {
         {navItem(
           "/messages",
           "DMs",
-          <img
-            alt=""
-            aria-hidden="true"
-            className="bottom-nav__icon-image"
-            src={iconSrc.message}
-          />,
+          <MessageNavIcon aria-hidden="true" className="bottom-nav__icon-image" />,
           unreadMessages
         )}
 
         {navItem(
           "/notifications",
           "Alerts",
-          <img
-            alt=""
-            aria-hidden="true"
-            className="bottom-nav__icon-image"
-            src={iconSrc.notification}
-          />,
+          <BellNavIcon aria-hidden="true" className="bottom-nav__icon-image" />,
           unreadNotifications
         )}
       </div>

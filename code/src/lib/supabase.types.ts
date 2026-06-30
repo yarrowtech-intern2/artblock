@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type AppRole = "visitor" | "creator";
+export type AppRole = "visitor" | "creator" | "admin";
 export type FeedPostType = "image" | "video" | "poll" | "text";
 export type ProfileGender = "male" | "female" | "non_binary" | "prefer_not_to_say";
 export type NotificationType =
@@ -357,6 +357,78 @@ export type Database = {
             foreignKeyName: "creator_profiles_id_fkey";
             columns: ["id"];
             isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      campaigns: {
+        Row: {
+          id: string;
+          name: string;
+          image_url: string;
+          destination_url: string;
+          cta_label: string;
+          open_in_new_tab: boolean;
+          desktop_enabled: boolean;
+          feed_enabled: boolean;
+          priority: number;
+          is_active: boolean;
+          starts_at: string | null;
+          ends_at: string | null;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          image_url: string;
+          destination_url: string;
+          cta_label?: string;
+          open_in_new_tab?: boolean;
+          desktop_enabled?: boolean;
+          feed_enabled?: boolean;
+          priority?: number;
+          is_active?: boolean;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          image_url?: string;
+          destination_url?: string;
+          cta_label?: string;
+          open_in_new_tab?: boolean;
+          desktop_enabled?: boolean;
+          feed_enabled?: boolean;
+          priority?: number;
+          is_active?: boolean;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "campaigns_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           }

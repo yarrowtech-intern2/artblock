@@ -77,7 +77,9 @@ for delete
 to authenticated
 using (auth.uid() = id);
 
-create or replace view public.public_creator_profiles as
+drop view if exists public.public_creator_profiles;
+
+create view public.public_creator_profiles as
 select
   cp.id,
   cp.slug,

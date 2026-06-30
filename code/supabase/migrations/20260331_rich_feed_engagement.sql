@@ -287,7 +287,9 @@ left join public.creator_profiles cp on cp.id = p.author_id
 where p.is_published = true
 order by p.created_at desc;
 
-create or replace view public.post_engagement_stats as
+drop view if exists public.post_engagement_stats;
+
+create view public.post_engagement_stats as
 select
   p.id as post_id,
   count(distinct r.id) filter (where r.reaction_type = 'like') as like_count,
@@ -297,7 +299,9 @@ left join public.post_reactions r on r.post_id = p.id
 left join public.post_comments c on c.post_id = p.id
 group by p.id;
 
-create or replace view public.poll_option_results as
+drop view if exists public.poll_option_results;
+
+create view public.poll_option_results as
 select
   o.id as option_id,
   o.post_id,
@@ -308,7 +312,9 @@ from public.post_poll_options o
 left join public.post_poll_votes v on v.option_id = o.id
 group by o.id, o.post_id, o.label, o.position;
 
-create or replace view public.comment_threads as
+drop view if exists public.comment_threads;
+
+create view public.comment_threads as
 select
   c.id,
   c.post_id,

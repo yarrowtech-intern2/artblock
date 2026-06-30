@@ -8,6 +8,27 @@ create table if not exists public.posts (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'posts'
+      and column_name = 'image_url'
+  )
+  and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'posts'
+      and column_name = 'media_url'
+  ) then
+    alter table public.posts rename column image_url to media_url;
+  end if;
+end
+$$;
+
 alter table public.posts enable row level security;
 
 drop trigger if exists posts_set_updated_at on public.posts;
@@ -47,10 +68,12 @@ for delete
 to authenticated
 using (auth.uid() = author_id);
 
-create or replace view public.feed_posts as
+drop view if exists public.feed_posts;
+
+create view public.feed_posts as
 select
   p.id,
-  p.image_url,
+  p.media_url,
   p.caption,
   p.created_at,
   p.author_id,

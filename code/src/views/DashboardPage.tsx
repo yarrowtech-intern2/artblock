@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CreatorAccessPanel } from "../components/dashboard/CreatorAccessPanel";
-import { Link, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { CreatorStudio } from "../components/dashboard/CreatorStudio";
 import { PostComposer } from "../components/dashboard/PostComposer";
 import { ProfileEditor } from "../components/dashboard/ProfileEditor";
@@ -14,6 +14,7 @@ export const DashboardPage = () => {
   const { profile, user, refreshProfile, signOut } = useAuth();
   const location = useLocation();
   const postingSectionRef = useRef<HTMLDivElement | null>(null);
+  const verificationSectionRef = useRef<HTMLDivElement | null>(null);
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
   const [isLoadingCreatorProfile, setLoadingCreatorProfile] = useState(false);
 
@@ -40,12 +41,23 @@ export const DashboardPage = () => {
   }, [user?.id, profile?.role]);
 
   useEffect(() => {
-    if (location.hash !== "#posting" || profile?.role !== "creator") {
+    if (profile?.role !== "creator") {
+      return;
+    }
+
+    const targetRef =
+      location.hash === "#posting"
+        ? postingSectionRef
+        : location.hash === "#verification"
+          ? verificationSectionRef
+          : null;
+
+    if (!targetRef) {
       return;
     }
 
     const frame = window.requestAnimationFrame(() => {
-      postingSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      targetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     return () => window.cancelAnimationFrame(frame);
@@ -53,6 +65,10 @@ export const DashboardPage = () => {
 
   if (!profile || !user) {
     return null;
+  }
+
+  if (profile.role === "admin") {
+    return <Navigate replace to="/admin" />;
   }
 
   return (
@@ -103,12 +119,14 @@ export const DashboardPage = () => {
 
       <div className="dashboard-stack">
         <ProfileEditor profile={profile} userId={user.id} onProfileSaved={refreshProfile} />
-        <CreatorAccessPanel
-          creatorProfile={creatorProfile}
-          onRefreshCreatorProfile={loadCreatorProfile}
-          onRefreshProfile={refreshProfile}
-          profile={profile}
-        />
+        <div className="dashboard-anchor-target" id="verification" ref={verificationSectionRef}>
+          <CreatorAccessPanel
+            creatorProfile={creatorProfile}
+            onRefreshCreatorProfile={loadCreatorProfile}
+            onRefreshProfile={refreshProfile}
+            profile={profile}
+          />
+        </div>
 
         {profile.role === "creator" ? (
           <>

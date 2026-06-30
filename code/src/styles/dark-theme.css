@@ -481,6 +481,24 @@
   color: var(--control-foreground-muted);
 }
 
+[data-theme="dark"] .feed-tabs__search,
+[data-theme="amoled"] .feed-tabs__search {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .feed-tabs__search input,
+[data-theme="amoled"] .feed-tabs__search input,
+[data-theme="dark"] .feed-tabs__search button,
+[data-theme="amoled"] .feed-tabs__search button {
+  color: var(--copy-primary);
+}
+
+[data-theme="dark"] .feed-tabs__search input::placeholder,
+[data-theme="amoled"] .feed-tabs__search input::placeholder {
+  color: var(--copy-muted);
+}
+
 [data-theme="dark"] .feed-tab--active,
 [data-theme="amoled"] .feed-tab--active {
   background: var(--brand-accent);
@@ -545,6 +563,11 @@
 [data-theme="dark"] .feed-rail-stats article,
 [data-theme="amoled"] .feed-rail-stats article {
   background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .campaign-rail-image,
+[data-theme="amoled"] .campaign-rail-image {
   border-color: rgba(255, 255, 255, 0.07);
 }
 
@@ -623,6 +646,151 @@
 [data-theme="dark"] .feed-card__headline,
 [data-theme="amoled"] .feed-card__headline {
   background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .campaign-card__actions,
+[data-theme="amoled"] .campaign-card__actions {
+  border-top-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .admin-search,
+[data-theme="amoled"] .admin-search,
+[data-theme="dark"] .admin-image-upload__row,
+[data-theme="amoled"] .admin-image-upload__row,
+[data-theme="dark"] .admin-campaign-editor,
+[data-theme="amoled"] .admin-campaign-editor,
+[data-theme="dark"] .admin-campaign-list__item,
+[data-theme="amoled"] .admin-campaign-list__item,
+[data-theme="dark"] .admin-user-row,
+[data-theme="amoled"] .admin-user-row,
+[data-theme="dark"] .admin-kebab,
+[data-theme="amoled"] .admin-kebab,
+[data-theme="dark"] .admin-kebab-menu,
+[data-theme="amoled"] .admin-kebab-menu,
+[data-theme="dark"] .admin-post-list__select,
+[data-theme="amoled"] .admin-post-list__select,
+[data-theme="dark"] .admin-post-editor__meta,
+[data-theme="amoled"] .admin-post-editor__meta {
+  background: rgba(26, 24, 36, 0.96);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .admin-stat-card,
+[data-theme="amoled"] .admin-stat-card,
+[data-theme="dark"] .admin-stat-detail,
+[data-theme="amoled"] .admin-stat-detail {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .admin-stat-card,
+[data-theme="amoled"] .admin-stat-card {
+  background: #b0b0b0;
+  color: #111111;
+}
+
+[data-theme="dark"] .admin-stat-card span,
+[data-theme="dark"] .admin-stat-card small,
+[data-theme="amoled"] .admin-stat-card span,
+[data-theme="amoled"] .admin-stat-card small {
+  color: rgba(17, 17, 17, 0.82);
+}
+
+[data-theme="dark"] .admin-stat-card strong,
+[data-theme="amoled"] .admin-stat-card strong {
+  color: #111111;
+}
+
+[data-theme="dark"] .admin-stat-card.is-expanded,
+[data-theme="amoled"] .admin-stat-card.is-expanded {
+  background: #7e80f2;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .admin-stat-card.is-expanded span,
+[data-theme="dark"] .admin-stat-card.is-expanded small,
+[data-theme="dark"] .admin-stat-card.is-expanded strong,
+[data-theme="amoled"] .admin-stat-card.is-expanded span,
+[data-theme="amoled"] .admin-stat-card.is-expanded small,
+[data-theme="amoled"] .admin-stat-card.is-expanded strong {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .admin-stat-detail,
+[data-theme="amoled"] .admin-stat-detail {
+  background: rgba(126, 128, 242, 0.12);
+  color: #f2f2f5;
+}
+
+[data-theme="dark"] .admin-stat-card span,
+[data-theme="dark"] .admin-stat-card small,
+[data-theme="dark"] .admin-stat-detail__list p,
+[data-theme="amoled"] .admin-stat-card span,
+[data-theme="amoled"] .admin-stat-card small,
+[data-theme="amoled"] .admin-stat-detail__list p {
+  color: rgba(242, 242, 245, 0.86);
+}
+
+[data-theme="dark"] .admin-stat-card__details p,
+[data-theme="amoled"] .admin-stat-card__details p {
+  color: rgba(242, 242, 245, 0.86);
+}
+
+[data-theme="dark"] .admin-stat-card.is-expanded,
+[data-theme="amoled"] .admin-stat-card.is-expanded {
+  outline-color: transparent;
+}
+
+[data-theme="dark"] .admin-stat-detail__list p,
+[data-theme="amoled"] .admin-stat-detail__list p {
+  background: rgba(129, 140, 248, 0.08);
+  border-color: rgba(129, 140, 248, 0.16);
+}
+
+[data-theme="dark"] .admin-campaign-preview,
+[data-theme="amoled"] .admin-campaign-preview {
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .admin-campaign-list__meta strong,
+[data-theme="dark"] .admin-user-row__identity strong,
+[data-theme="dark"] .admin-stat-card strong,
+[data-theme="dark"] .admin-stat-detail__header strong,
+[data-theme="dark"] .admin-panel__header h2,
+[data-theme="amoled"] .admin-campaign-list__meta strong,
+[data-theme="amoled"] .admin-user-row__identity strong,
+[data-theme="amoled"] .admin-stat-card strong,
+[data-theme="amoled"] .admin-stat-detail__header strong,
+[data-theme="amoled"] .admin-panel__header h2 {
+  color: #f2f2f5;
+}
+
+[data-theme="dark"] .admin-console__header p,
+[data-theme="dark"] .admin-campaign-editor__topline,
+[data-theme="dark"] .admin-user-row__identity span,
+[data-theme="dark"] .admin-user-row__meta,
+[data-theme="dark"] .admin-post-list__select span,
+[data-theme="dark"] .admin-post-list__select small,
+[data-theme="dark"] .admin-empty-copy,
+[data-theme="amoled"] .admin-console__header p,
+[data-theme="amoled"] .admin-campaign-editor__topline,
+[data-theme="amoled"] .admin-user-row__identity span,
+[data-theme="amoled"] .admin-user-row__meta,
+[data-theme="amoled"] .admin-post-list__select span,
+[data-theme="amoled"] .admin-post-list__select small,
+[data-theme="amoled"] .admin-empty-copy {
+  color: rgba(242, 242, 245, 0.72);
+}
+
+[data-theme="dark"] .admin-kebab-menu__item,
+[data-theme="amoled"] .admin-kebab-menu__item {
+  color: #f2f2f5;
+}
+
+[data-theme="dark"] .admin-kebab-menu__item:hover,
+[data-theme="amoled"] .admin-kebab-menu__item:hover {
+  background: rgba(129, 140, 248, 0.12);
 }
 
 /* ─── Icon Actions ───────────────────────────────────────────── */

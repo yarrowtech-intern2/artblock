@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { ProfileAvatar } from "../shared/ProfileAvatar";
+import { BellNavIcon, ThemeToggleIcon } from "../shared/NavIcons";
 import { ThemeSheet } from "../settings/ThemeSheet";
 import {
   fetchUnreadMessageCount,
@@ -9,10 +10,6 @@ import {
 import { getSupabaseClient } from "../../lib/supabase";
 import { useAuth } from "../../providers/AuthProvider";
 import { useTheme } from "../../providers/ThemeProvider";
-import notificationBlackIcon from "../../public/icons/svg/notification-black.svg";
-import notificationWhiteIcon from "../../public/icons/svg/notification-white.svg";
-import themeBlackIcon from "../../public/icons/svg/theme-black.svg";
-import themeWhiteIcon from "../../public/icons/svg/theme-white.svg";
 import logoBlack from "../../public/logo/logo-black-transparent.png";
 import logoWhite from "../../public/logo/logo-white-transparent.png";
 
@@ -31,14 +28,13 @@ export const Header = () => {
   const location = useLocation();
   const homeTarget = status === "authenticated" ? "/feed" : "/";
   const profileTarget = user?.id ? `/profiles/${user.id}` : "/dashboard";
+  const isAdmin = profile?.role === "admin";
   const isAuthed = status === "authenticated";
   const isLanding =
     !isAuthed &&
     (location.pathname === "/" || location.pathname === "/classic-home");
   const { theme } = useTheme();
   const brandLogo = theme === "light" ? logoBlack : logoWhite;
-  const themeIcon = theme === "light" ? themeBlackIcon : themeWhiteIcon;
-  const notificationIcon = theme === "light" ? notificationBlackIcon : notificationWhiteIcon;
 
   useEffect(() => {
     if (!isLanding) {
@@ -129,7 +125,7 @@ export const Header = () => {
               onClick={() => setThemeOpen(true)}
               type="button"
             >
-              <img alt="" aria-hidden="true" className="header-theme-btn__icon" src={themeIcon} />
+              <ThemeToggleIcon aria-hidden="true" className="header-theme-btn__icon" />
             </button>
           ) : null}
 
@@ -205,6 +201,14 @@ export const Header = () => {
                 className={({ isActive }) =>
                   `site-nav__link${isActive ? " site-nav__link--active" : ""}`
                 }
+                to={isAdmin ? "/admin" : "/dashboard"}
+              >
+                {isAdmin ? "Admin" : "Dashboard"}
+              </NavLink>
+              <NavLink
+                className={({ isActive }) =>
+                  `site-nav__link${isActive ? " site-nav__link--active" : ""}`
+                }
                 to="/settings"
               >
                 Settings
@@ -221,12 +225,7 @@ export const Header = () => {
                   to="/notifications"
                 >
                   <span className="header-theme-btn__icon-shell">
-                    <img
-                      alt=""
-                      aria-hidden="true"
-                      className="header-theme-btn__icon"
-                      src={notificationIcon}
-                    />
+                    <BellNavIcon aria-hidden="true" className="header-theme-btn__icon" />
                     {unreadNotifications > 0 ? (
                       <span className="header-theme-btn__badge">
                         {unreadNotifications > 99 ? "99+" : unreadNotifications}
@@ -241,7 +240,7 @@ export const Header = () => {
                   type="button"
                   title="Change theme"
                 >
-                  <img alt="" aria-hidden="true" className="header-theme-btn__icon" src={themeIcon} />
+                  <ThemeToggleIcon aria-hidden="true" className="header-theme-btn__icon" />
                 </button>
               </div>
             </nav>

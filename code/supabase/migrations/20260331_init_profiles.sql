@@ -1,4 +1,16 @@
-create type public.app_role as enum ('visitor', 'creator');
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_type type
+    join pg_namespace namespace on namespace.oid = type.typnamespace
+    where namespace.nspname = 'public'
+      and type.typname = 'app_role'
+  ) then
+    create type public.app_role as enum ('visitor', 'creator');
+  end if;
+end
+$$;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -22,7 +34,9 @@ begin
 end;
 $$;
 
-create or replace trigger profiles_set_updated_at
+drop trigger if exists profiles_set_updated_at on public.profiles;
+
+create trigger profiles_set_updated_at
 before update on public.profiles
 for each row
 execute procedure public.set_updated_at();
@@ -58,6 +72,10 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row
 execute procedure public.handle_new_user();
+
+drop policy if exists "Profiles are viewable by the owner" on public.profiles;
+drop policy if exists "Profiles are insertable by the owner" on public.profiles;
+drop policy if exists "Profiles are updatable by the owner" on public.profiles;
 
 create policy "Profiles are viewable by the owner"
 on public.profiles

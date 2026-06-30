@@ -150,32 +150,48 @@
 @media (min-width: 768px) {
   [data-theme="dark"] .site-header--authed .site-header__surface,
   [data-theme="amoled"] .site-header--authed .site-header__surface {
-    background: linear-gradient(135deg, rgba(54, 51, 78, 0.68), rgba(99, 102, 241, 0.24));
-    border-color: rgba(161, 169, 255, 0.22);
-    box-shadow:
-      inset 0 1.5px 0 rgba(255, 255, 255, 0.14),
-      inset 0 -1px 0 rgba(6, 6, 12, 0.24),
-      0 10px 28px rgba(32, 24, 74, 0.32),
-      0 18px 40px rgba(0, 0, 0, 0.22);
-    backdrop-filter: blur(30px) saturate(180%) brightness(0.9);
-    -webkit-backdrop-filter: blur(30px) saturate(180%) brightness(0.9);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   [data-theme="dark"] .site-header--authed .site-header__surface::before,
   [data-theme="amoled"] .site-header--authed .site-header__surface::before {
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.14) 0%,
-      rgba(129, 140, 248, 0.08) 44%,
-      rgba(255, 255, 255, 0) 100%
-    );
+    display: none;
   }
 
   [data-theme="dark"] .site-header--authed .site-nav--desktop-only,
   [data-theme="amoled"] .site-header--authed .site-nav--desktop-only {
-    background: transparent;
-    box-shadow: none;
-    border-color: transparent;
+    background: linear-gradient(
+      135deg,
+      rgba(100, 70, 180, 0.52) 0%,
+      rgba(20, 8, 45, 0.62) 100%
+    ); /* Dark purple-to-indigo liquid glass gradient */
+    backdrop-filter: blur(22px) saturate(190%);
+    -webkit-backdrop-filter: blur(22px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 4px 20px rgba(0, 0, 0, 0.45);
+  }
+
+  [data-theme="dark"] .site-header--authed .site-nav__link,
+  [data-theme="amoled"] .site-header--authed .site-nav__link,
+  [data-theme="dark"] .site-header--authed .header-nav-icon-btn,
+  [data-theme="amoled"] .site-header--authed .header-nav-icon-btn {
+    color: #E8DDFF; /* Light purple text and icons */
+  }
+
+  [data-theme="dark"] .site-header--authed .site-nav__link--active,
+  [data-theme="amoled"] .site-header--authed .site-nav__link--active {
+    color: #ffffff; /* Brighter when active */
+  }
+
+  [data-theme="dark"] .site-header--authed .header-nav-badge,
+  [data-theme="amoled"] .site-header--authed .header-nav-badge {
+    border-color: rgba(255, 255, 255, 0.1);
   }
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ShortCard } from "../components/shorts/ShortCard";
 import { ShortsComposer } from "../components/shorts/ShortsComposer";
 import {
@@ -17,6 +17,7 @@ const TIP_PRESETS = [100, 250, 500, 1000];
 
 export const ShortsPage = () => {
   const { profile, user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [posts, setPosts] = useState<ShortPost[]>([]);
   const [isLoading, setLoading] = useState(true);
@@ -34,7 +35,7 @@ export const ShortsPage = () => {
   const [tipMessage, setTipMessage] = useState("");
   const [isStartingTip, setStartingTip] = useState(false);
   const [tipError, setTipError] = useState<string | null>(null);
-  const [itemNodes, setItemNodes] = useState<Record<string, HTMLDivElement | null>>({});
+  const itemNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
   const feedRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const isComposerOpen = searchParams.get("compose") === "1";
@@ -116,11 +117,11 @@ export const ShortsPage = () => {
 
   useEffect(() => {
     const root = feedRef.current;
-    const entries = Object.entries(itemNodes).filter(([, node]) => Boolean(node)) as Array<
-      [string, HTMLDivElement]
-    >;
+    const nodes = posts
+      .map((post) => itemNodesRef.current[post.id])
+      .filter((node): node is HTMLDivElement => Boolean(node));
 
-    if (!root || entries.length === 0) {
+    if (!root || nodes.length === 0) {
       return;
     }
 
@@ -144,9 +145,9 @@ export const ShortsPage = () => {
       }
     );
 
-    entries.forEach(([, node]) => observer.observe(node));
+    nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, [itemNodes]);
+  }, [posts]);
 
   useEffect(() => {
     const root = feedRef.current;
@@ -278,104 +279,81 @@ export const ShortsPage = () => {
     razorpay.open();
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate("/feed");
+  };
+
   return (
-    <section className="shorts-page">
-      <div className="shorts-shell shorts-shell--live">
-        <aside className="shorts-sidebar">
-          <div className="shorts-sidebar__card">
-            <span className="section-heading__eyebrow">Shorts Feed</span>
-            <h1>Vertical creator stream</h1>
-            <p>
-              Infinite reel playback, quick reactions, tip-enabled creator support, and direct
-              upload from gallery or camera.
-            </p>
-            <div className="shorts-sidebar__actions">
+    <section className="shorts-page shorts-page--immersive">
+      {error ? <div className="shorts-page__error auth-message auth-message--error">{error}</div> : null}
+
+      <div className="shorts-feed" ref={feedRef}>
+        {isLoading ? (
+          <div className="shorts-empty">
+            <strong>Loading reels...</strong>
+          </div>
+        ) : null}
+
+        {!isLoading && posts.length === 0 ? (
+          <div className="shorts-empty">
+            <strong>No reels yet</strong>
+            <p>Upload the first short-form post from your gallery or camera.</p>
+            <div className="shorts-empty__actions">
               <button className="solid-button" onClick={() => syncComposerQuery(true)} type="button">
-                Upload Content
+                Upload your first reel
               </button>
               <Link className="ghost-button" to="/feed">
-                Back to Feed
+                Back to feed
               </Link>
             </div>
           </div>
-        </aside>
+        ) : null}
 
-        <div className="shorts-main shorts-main--live">
-          <div className="shorts-toolbar">
-            <div>
-              <span className="section-heading__eyebrow">Now Playing</span>
-              <h2>For You</h2>
-            </div>
-            <button className="ghost-button shorts-toolbar__upload" onClick={() => syncComposerQuery(true)} type="button">
-              Upload Reel
-            </button>
+        {posts.map((post) => (
+          <div
+            className="shorts-feed__item"
+            data-short-id={post.id}
+            key={post.id}
+            ref={(node) => {
+              if (node) {
+                itemNodesRef.current[post.id] = node;
+                return;
+              }
+
+              delete itemNodesRef.current[post.id];
+            }}
+          >
+            <ShortCard
+              isActive={activePostId === post.id}
+              onBack={handleBack}
+              onOpenComments={(targetPost) => {
+                setCommentError(null);
+                setCommentPostId(targetPost.id);
+              }}
+              onOpenTip={(targetPost) => {
+                setTipError(null);
+                setTipPostId(targetPost.id);
+              }}
+              post={post}
+              viewerId={user?.id ?? ""}
+            />
           </div>
+        ))}
 
-          {error ? <div className="auth-message auth-message--error">{error}</div> : null}
+        {!isLoading && posts.length > 0 ? <div className="shorts-feed__sentinel" ref={sentinelRef} /> : null}
 
-          <div className="shorts-feed" ref={feedRef}>
-            {isLoading ? (
-              <div className="shorts-empty">
-                <strong>Loading reels...</strong>
-              </div>
-            ) : null}
-
-            {!isLoading && posts.length === 0 ? (
-              <div className="shorts-empty">
-                <strong>No reels yet</strong>
-                <p>Upload the first short-form post from your gallery or camera.</p>
-                <button className="solid-button" onClick={() => syncComposerQuery(true)} type="button">
-                  Upload your first reel
-                </button>
-              </div>
-            ) : null}
-
-            {posts.map((post) => (
-              <div
-                className="shorts-feed__item"
-                data-short-id={post.id}
-                key={post.id}
-                ref={(node) => {
-                  setItemNodes((current) => {
-                    if (current[post.id] === node) {
-                      return current;
-                    }
-
-                    return {
-                      ...current,
-                      [post.id]: node
-                    };
-                  });
-                }}
-              >
-                <ShortCard
-                  isActive={activePostId === post.id}
-                  onOpenComments={(targetPost) => {
-                    setCommentError(null);
-                    setCommentPostId(targetPost.id);
-                  }}
-                  onOpenTip={(targetPost) => {
-                    setTipError(null);
-                    setTipPostId(targetPost.id);
-                  }}
-                  onRefresh={() => loadShorts({ page: 0, append: false })}
-                  post={post}
-                  viewerId={user?.id ?? ""}
-                />
-              </div>
-            ))}
-
-            {!isLoading && posts.length > 0 ? <div className="shorts-feed__sentinel" ref={sentinelRef} /> : null}
-
-            {isLoadingMore ? (
-              <div className="shorts-feed__loading">
-                <span />
-                <span />
-                <span />
-              </div>
-            ) : null}
+        {isLoadingMore ? (
+          <div className="shorts-feed__loading">
+            <span />
+            <span />
+            <span />
           </div>
-        </div>
+        ) : null}
       </div>
 
       <ShortsComposer

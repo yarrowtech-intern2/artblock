@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { ProfileAvatar } from "../shared/ProfileAvatar";
-import { BellNavIcon, ThemeToggleIcon } from "../shared/NavIcons";
+import { BellNavIcon, ThemeToggleIcon, BellNavIconSolid, LightbulbNavIcon } from "../shared/NavIcons";
 import { ThemeSheet } from "../settings/ThemeSheet";
 import {
   fetchUnreadMessageCount,
@@ -197,52 +197,52 @@ export const Header = () => {
               >
                 Profile
               </NavLink>
-              <NavLink
-                className={({ isActive }) =>
-                  `site-nav__link${isActive ? " site-nav__link--active" : ""}`
-                }
-                to={isAdmin ? "/admin" : "/dashboard"}
-              >
-                {isAdmin ? "Admin" : "Dashboard"}
-              </NavLink>
+              {isAdmin && (
+                <NavLink
+                  className={({ isActive }) =>
+                    `site-nav__link${isActive ? " site-nav__link--active" : ""}`
+                  }
+                  to="/admin"
+                >
+                  Admin
+                </NavLink>
+              )}
               <NavLink
                 className={({ isActive }) =>
                   `site-nav__link${isActive ? " site-nav__link--active" : ""}`
                 }
                 to="/settings"
               >
-                Settings
+                settings
               </NavLink>
-              <div className="site-nav__actions">
-                <NavLink
-                  aria-label="Notifications"
-                  className={({ isActive }) =>
-                    `header-theme-btn header-theme-btn--nav header-theme-btn--link${
-                      isActive ? " header-theme-btn--active" : ""
-                    }`
-                  }
-                  title="Notifications"
-                  to="/notifications"
-                >
-                  <span className="header-theme-btn__icon-shell">
-                    <BellNavIcon aria-hidden="true" className="header-theme-btn__icon" />
-                    {unreadNotifications > 0 ? (
-                      <span className="header-theme-btn__badge">
-                        {unreadNotifications > 99 ? "99+" : unreadNotifications}
-                      </span>
-                    ) : null}
-                  </span>
-                </NavLink>
-                <button
-                  aria-label="Appearance settings"
-                  className="header-theme-btn header-theme-btn--nav"
-                  onClick={() => setThemeOpen(true)}
-                  type="button"
-                  title="Change theme"
-                >
-                  <ThemeToggleIcon aria-hidden="true" className="header-theme-btn__icon" />
-                </button>
-              </div>
+
+              <NavLink
+                aria-label="Notifications"
+                className={({ isActive }) =>
+                  `header-nav-icon-btn${isActive ? " header-nav-icon-btn--active" : ""}`
+                }
+                title="Notifications"
+                to="/notifications"
+              >
+                <span className="header-nav-icon-shell">
+                  <BellNavIconSolid aria-hidden="true" className="header-nav-icon" />
+                  {unreadNotifications > 0 ? (
+                    <span className="header-nav-badge">
+                      {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                    </span>
+                  ) : null}
+                </span>
+              </NavLink>
+
+              <button
+                aria-label="Appearance settings"
+                className="header-nav-icon-btn"
+                onClick={() => setThemeOpen(true)}
+                type="button"
+                title="Change theme"
+              >
+                <LightbulbNavIcon aria-hidden="true" className="header-nav-icon" />
+              </button>
             </nav>
           ) : (
             /* Marketing nav with hamburger dropdown */

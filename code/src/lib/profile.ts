@@ -986,6 +986,62 @@ type CreateFeedPostInput = {
   pollOptions?: string[];
 };
 
+type SupabaseErrorLike = {
+  code?: string | null;
+  details?: string | null;
+  hint?: string | null;
+  message?: string | null;
+};
+
+const SHORTS_MIGRATION_FILE = "20260630_shorts_reels_and_tips.sql";
+
+const getSupabaseErrorText = (error: SupabaseErrorLike | null | undefined) =>
+  [error?.message, error?.details, error?.hint, error?.code].filter(Boolean).join(" ");
+
+const isMissingSchemaCacheColumn = (errorText: string, columnName: string) =>
+  errorText.includes(`'${columnName}'`) && errorText.toLowerCase().includes("schema cache");
+
+const isMissingSchemaCacheRelation = (errorText: string, relationName: string) =>
+  errorText.includes(`'${relationName}'`) && errorText.toLowerCase().includes("schema cache");
+
+const isShortsSchemaMissingError = (errorText: string) =>
+  [
+    "compression_status",
+    "surface",
+    "thumbnail_url",
+    "media_storage_path",
+    "thumbnail_storage_path",
+    "media_duration_seconds",
+    "media_width",
+    "media_height",
+    "tip_enabled"
+  ].some((columnName) => isMissingSchemaCacheColumn(errorText, columnName)) ||
+  isMissingSchemaCacheRelation(errorText, "short_posts");
+
+const mapShortsSchemaError = (errorText: string) =>
+  isShortsSchemaMissingError(errorText)
+    ? `Shorts/Reels is not enabled in Supabase yet. Apply the ${SHORTS_MIGRATION_FILE} migration and refresh the API schema cache.`
+    : errorText;
+
+const shouldRetryLegacyFeedInsert = (input: CreateFeedPostInput, errorText: string) =>
+  (input.surface ?? "feed") === "feed" && isShortsSchemaMissingError(errorText);
+
+const buildLegacyFeedPostPayload = (
+  userId: string,
+  input: CreateFeedPostInput
+): Database["public"]["Tables"]["posts"]["Insert"] => ({
+  author_id: userId,
+  post_type: input.postType,
+  title: input.title ?? null,
+  body: input.body ?? null,
+  media_url: input.mediaUrl ?? null,
+  caption:
+    input.postType === "image" || input.postType === "video"
+      ? input.plainBody ?? input.body ?? null
+      : null,
+  is_published: input.isPublished ?? true
+});
+
 export const createFeedPost = async (userId: string, input: CreateFeedPostInput) => {
   const supabase = getSupabaseClient();
 
@@ -1012,21 +1068,35 @@ export const createFeedPost = async (userId: string, input: CreateFeedPostInput)
     is_published: input.isPublished ?? true
   };
 
-  const { data, error } = await (supabase.from("posts") as never as {
-    insert: (
-      values: Database["public"]["Tables"]["posts"]["Insert"]
-    ) => {
-      select: (columns: string) => {
-        single: () => Promise<{ data: { id: string } | null; error: { message: string } | null }>;
+  const insertPost = async (values: Database["public"]["Tables"]["posts"]["Insert"]) =>
+    await (supabase.from("posts") as never as {
+      insert: (
+        payload: Database["public"]["Tables"]["posts"]["Insert"]
+      ) => {
+        select: (columns: string) => {
+          single: () => Promise<{
+            data: { id: string } | null;
+            error: SupabaseErrorLike | null;
+          }>;
+        };
       };
-    };
-  })
-    .insert(payload)
-    .select("id")
-    .single();
+    })
+      .insert(values)
+      .select("id")
+      .single();
+
+  let { data, error } = await insertPost(payload);
+  const errorText = getSupabaseErrorText(error);
+
+  if ((error || !data) && shouldRetryLegacyFeedInsert(input, errorText)) {
+    ({ data, error } = await insertPost(buildLegacyFeedPostPayload(userId, input)));
+  }
 
   if (error || !data) {
-    return { error: error?.message ?? "Unable to create post." };
+    const finalErrorText = getSupabaseErrorText(error) || "Unable to create post.";
+    return {
+      error: (input.surface ?? "feed") === "short" ? mapShortsSchemaError(finalErrorText) : finalErrorText
+    };
   }
 
   if (input.postType === "poll" && input.pollOptions && input.pollOptions.length > 0) {
@@ -1554,7 +1624,11 @@ export const fetchShortPosts = async (
     .range(rangeFrom, rangeTo);
 
   if (error) {
-    return { data: [] as ShortPost[], error: error.message, hasMore: false };
+    return {
+      data: [] as ShortPost[],
+      error: mapShortsSchemaError(getSupabaseErrorText(error)),
+      hasMore: false
+    };
   }
 
   const pagedPosts = ((postsData ?? []) as Database["public"]["Views"]["short_posts"]["Row"][]).slice(0, pageSize);

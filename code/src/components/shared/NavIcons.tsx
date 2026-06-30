@@ -52,3 +52,20 @@ export const ThemeToggleIcon = (props: IconProps) => (
     <circle cx="9" cy="12" r="2.8" fill="currentColor" />
   </svg>
 );
+
+export const BellNavIconSolid = (props: IconProps) => (
+  <svg {...baseProps} fill="currentColor" viewBox="0 0 24 24" {...props}>
+    <path d="M12 2A5.91 5.91 0 0 0 6 8v3.5c0 .77-.38 1.95-.84 2.62l-1.37 2.01C3.12 17.18 3.52 19 5.25 19h13.5c1.73 0 2.13-1.82 1.46-2.87l-1.37-2.01c-.46-.67-.84-1.85-.84-2.62V8a5.91 5.91 0 0 0-6-6Zm2.5 18a2.5 2.5 0 0 1-5 0" />
+  </svg>
+);
+
+export const LightbulbNavIcon = (props: IconProps) => (
+  <svg {...baseProps} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" {...props}>
+    {/* Closed glass outline — no open-path roughness, no stray rays */}
+    <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5z" />
+    {/* Socket cap */}
+    <line x1="9" y1="17" x2="15" y2="17" />
+    <line x1="10" y1="20" x2="14" y2="20" />
+  </svg>
+);
+

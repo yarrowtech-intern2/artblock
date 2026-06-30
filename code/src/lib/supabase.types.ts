@@ -8,6 +8,7 @@ export type Json =
 
 export type AppRole = "visitor" | "creator" | "admin";
 export type FeedPostType = "image" | "video" | "poll" | "text";
+export type PostSurface = "feed" | "short";
 export type ProfileGender = "male" | "female" | "non_binary" | "prefer_not_to_say";
 export type NotificationType =
   | "new_follower"
@@ -162,9 +163,18 @@ export type Database = {
           id: string;
           author_id: string;
           post_type: FeedPostType;
+          surface: PostSurface;
           title: string | null;
           body: string | null;
           media_url: string | null;
+          thumbnail_url: string | null;
+          media_storage_path: string | null;
+          thumbnail_storage_path: string | null;
+          media_duration_seconds: number | null;
+          media_width: number | null;
+          media_height: number | null;
+          compression_status: string;
+          tip_enabled: boolean;
           caption: string | null;
           is_published: boolean;
           is_pinned: boolean;
@@ -175,9 +185,18 @@ export type Database = {
           id?: string;
           author_id: string;
           post_type?: FeedPostType;
+          surface?: PostSurface;
           title?: string | null;
           body?: string | null;
           media_url?: string | null;
+          thumbnail_url?: string | null;
+          media_storage_path?: string | null;
+          thumbnail_storage_path?: string | null;
+          media_duration_seconds?: number | null;
+          media_width?: number | null;
+          media_height?: number | null;
+          compression_status?: string;
+          tip_enabled?: boolean;
           caption?: string | null;
           is_published?: boolean;
           is_pinned?: boolean;
@@ -188,9 +207,18 @@ export type Database = {
           id?: string;
           author_id?: string;
           post_type?: FeedPostType;
+          surface?: PostSurface;
           title?: string | null;
           body?: string | null;
           media_url?: string | null;
+          thumbnail_url?: string | null;
+          media_storage_path?: string | null;
+          thumbnail_storage_path?: string | null;
+          media_duration_seconds?: number | null;
+          media_width?: number | null;
+          media_height?: number | null;
+          compression_status?: string;
+          tip_enabled?: boolean;
           caption?: string | null;
           is_published?: boolean;
           is_pinned?: boolean;
@@ -227,6 +255,30 @@ export type Database = {
           post_id?: string;
           author_id?: string;
           body?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      post_shares: {
+        Row: {
+          id: string;
+          post_id: string;
+          user_id: string;
+          platform: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          user_id: string;
+          platform?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          user_id?: string;
+          platform?: string;
           created_at?: string;
         };
         Relationships: [];
@@ -538,6 +590,79 @@ export type Database = {
           }
         ];
       };
+      artist_tips: {
+        Row: {
+          id: string;
+          post_id: string | null;
+          sender_id: string;
+          recipient_id: string;
+          razorpay_order_id: string;
+          razorpay_payment_id: string | null;
+          amount_paise: number;
+          currency: string;
+          message: string | null;
+          status: string;
+          metadata: Json;
+          paid_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id?: string | null;
+          sender_id: string;
+          recipient_id: string;
+          razorpay_order_id: string;
+          razorpay_payment_id?: string | null;
+          amount_paise: number;
+          currency?: string;
+          message?: string | null;
+          status?: string;
+          metadata?: Json;
+          paid_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string | null;
+          sender_id?: string;
+          recipient_id?: string;
+          razorpay_order_id?: string;
+          razorpay_payment_id?: string | null;
+          amount_paise?: number;
+          currency?: string;
+          message?: string | null;
+          status?: string;
+          metadata?: Json;
+          paid_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "artist_tips_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "artist_tips_recipient_id_fkey";
+            columns: ["recipient_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "artist_tips_sender_id_fkey";
+            columns: ["sender_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       user_settings: {
         Row: {
           profile_id: string;
@@ -648,9 +773,46 @@ export type Database = {
           id: string | null;
           author_id: string | null;
           post_type: FeedPostType | null;
+          surface: PostSurface | null;
           title: string | null;
           body: string | null;
           media_url: string | null;
+          thumbnail_url: string | null;
+          media_duration_seconds: number | null;
+          media_width: number | null;
+          media_height: number | null;
+          tip_enabled: boolean | null;
+          share_count: number | null;
+          tip_total_paise: number | null;
+          is_published: boolean | null;
+          is_pinned: boolean | null;
+          created_at: string | null;
+          full_name: string | null;
+          is_verified_artist: boolean | null;
+          username: string | null;
+          avatar_url: string | null;
+          creator_slug: string | null;
+          headline: string | null;
+          comment_permissions: "everyone" | "followers" | "nobody" | null;
+          viewer_can_comment: boolean | null;
+        };
+      };
+      short_posts: {
+        Row: {
+          id: string | null;
+          author_id: string | null;
+          post_type: FeedPostType | null;
+          surface: PostSurface | null;
+          title: string | null;
+          body: string | null;
+          media_url: string | null;
+          thumbnail_url: string | null;
+          media_duration_seconds: number | null;
+          media_width: number | null;
+          media_height: number | null;
+          tip_enabled: boolean | null;
+          share_count: number | null;
+          tip_total_paise: number | null;
           is_published: boolean | null;
           is_pinned: boolean | null;
           created_at: string | null;
@@ -669,6 +831,8 @@ export type Database = {
           post_id: string | null;
           like_count: number | null;
           comment_count: number | null;
+          share_count: number | null;
+          tip_total_paise: number | null;
         };
       };
       poll_option_results: {

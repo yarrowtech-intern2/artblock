@@ -276,7 +276,7 @@ export const FeedPage = () => {
         </aside>
 
         {/* Main feed column */}
-        <div className="feed-main">
+        <div className="feed-main feed-main--with-pinned-tabs">
           {/* Compact tab bar */}
           <FeedTopTabs
             activeFeedScope={feedScope}
@@ -305,7 +305,7 @@ export const FeedPage = () => {
               setSearchParams(nextParams, { replace: true });
             }}
             searchValue={searchQuery}
-            sticky={false}
+            sticky
           />
 
           {error ? <div className="auth-message auth-message--error">{error}</div> : null}
@@ -390,15 +390,15 @@ export const FeedPage = () => {
           {profile?.role === "creator" ? (
             <div className="feed-rail-card feed-create-card">
               <h2>Create a Post</h2>
-              <p>Post an Image, video, poll or Text</p>
+              <p>Upload a reel from your library or camera.</p>
               <div className="feed-create-card__actions">
-                <Link className="solid-button" to={{ pathname: "/dashboard", hash: "#posting" }}>
-                  Post Content
+                <Link className="solid-button" to={{ pathname: "/shorts", search: "?compose=1" }}>
+                  Upload Content
                 </Link>
                 <Link
-                  aria-label="Create post"
+                  aria-label="Upload reel"
                   className="feed-create-card__plus"
-                  to={{ pathname: "/dashboard", hash: "#posting" }}
+                  to={{ pathname: "/shorts", search: "?compose=1" }}
                 >
                   <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
                     <line stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" x1="12" x2="12" y1="5" y2="19" />

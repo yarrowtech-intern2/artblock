@@ -1,5 +1,11 @@
 import type { Session, User } from "@supabase/supabase-js";
-import type { AppRole, FeedPostType, NotificationType, ProfileGender } from "../lib/supabase.types";
+import type {
+  AppRole,
+  FeedPostType,
+  NotificationType,
+  PostSurface,
+  ProfileGender
+} from "../lib/supabase.types";
 
 export type Profile = {
   id: string;
@@ -124,9 +130,17 @@ export type FeedPost = {
   id: string;
   author_id: string;
   post_type: FeedPostType;
+  surface?: PostSurface;
   title: string | null;
   body: string | null;
   media_url: string | null;
+  thumbnail_url?: string | null;
+  media_duration_seconds?: number | null;
+  media_width?: number | null;
+  media_height?: number | null;
+  tip_enabled?: boolean;
+  share_count?: number;
+  tip_total_paise?: number;
   created_at: string;
   is_pinned: boolean;
   full_name: string;
@@ -145,6 +159,17 @@ export type FeedPost = {
   poll_options: PollOption[];
   voted_option_id: string | null;
   comments: FeedComment[];
+};
+
+export type ShortPost = FeedPost & {
+  surface: "short";
+  thumbnail_url: string | null;
+  media_duration_seconds: number | null;
+  media_width: number | null;
+  media_height: number | null;
+  tip_enabled: boolean;
+  share_count: number;
+  tip_total_paise: number;
 };
 
 export type InboxThread = {

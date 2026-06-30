@@ -191,7 +191,7 @@ export const PostComposer = ({
         return;
       }
 
-      mediaUrl = uploadResult.data;
+      mediaUrl = uploadResult.data.publicUrl;
     }
 
     const serializedBody = serializeRichPostPayload({

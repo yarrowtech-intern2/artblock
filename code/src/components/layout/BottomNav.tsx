@@ -94,9 +94,9 @@ export const BottomNav = () => {
         )}
 
         <NavLink
-          to={{ pathname: "/dashboard", hash: "#posting" }}
+          to={{ pathname: "/shorts", search: "?compose=1" }}
           className="bottom-nav__create"
-          aria-label="Create post"
+          aria-label="Upload reel"
         >
           <span className="bottom-nav__create-btn">
             <svg aria-hidden="true" fill="none" height="26" viewBox="0 0 24 24" width="26">

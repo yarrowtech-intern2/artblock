@@ -506,31 +506,39 @@
   box-shadow: 0 2px 12px rgba(129, 140, 248, 0.38);
 }
 
-[data-theme="dark"] .shorts-phone,
-[data-theme="amoled"] .shorts-phone {
+[data-theme="dark"] .shorts-empty,
+[data-theme="dark"] .shorts-sidebar__card,
+[data-theme="dark"] .shorts-composer,
+[data-theme="dark"] .shorts-sheet__panel,
+[data-theme="amoled"] .shorts-empty,
+[data-theme="amoled"] .shorts-sidebar__card,
+[data-theme="amoled"] .shorts-composer,
+[data-theme="amoled"] .shorts-sheet__panel {
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 38%),
-    linear-gradient(180deg, rgba(22, 22, 28, 0.92), rgba(10, 10, 14, 0.92));
-  border-color: rgba(255, 255, 255, 0.08);
+    linear-gradient(180deg, rgba(18, 18, 24, 0.96), rgba(11, 11, 16, 0.92)),
+    radial-gradient(circle at top, rgba(129, 140, 248, 0.18), transparent 58%);
+  color: #f5f7ff;
 }
 
-[data-theme="dark"] .shorts-phone__media,
-[data-theme="amoled"] .shorts-phone__media {
-  background:
-    linear-gradient(180deg, rgba(129, 140, 248, 0.18), rgba(0, 0, 0, 0.08)),
-    linear-gradient(135deg, rgba(129, 140, 248, 0.12), rgba(255, 255, 255, 0));
+[data-theme="dark"] .short-card__action,
+[data-theme="dark"] .short-card__support,
+[data-theme="amoled"] .short-card__action,
+[data-theme="amoled"] .short-card__support {
+  background: rgba(7, 8, 12, 0.42);
 }
 
-[data-theme="dark"] .shorts-phone__actions span,
-[data-theme="amoled"] .shorts-phone__actions span {
-  background: rgba(255, 255, 255, 0.72);
+[data-theme="dark"] .shorts-comment,
+[data-theme="amoled"] .shorts-comment {
+  background: rgba(255, 255, 255, 0.06);
 }
 
-[data-theme="dark"] .shorts-phone__body p,
-[data-theme="dark"] .shorts-phone__footer span,
-[data-theme="amoled"] .shorts-phone__body p,
-[data-theme="amoled"] .shorts-phone__footer span {
-  color: rgba(242, 242, 245, 0.72);
+[data-theme="dark"] .shorts-composer__empty p,
+[data-theme="dark"] .shorts-sidebar__card p,
+[data-theme="dark"] .shorts-comments__empty,
+[data-theme="amoled"] .shorts-composer__empty p,
+[data-theme="amoled"] .shorts-sidebar__card p,
+[data-theme="amoled"] .shorts-comments__empty {
+  color: rgba(242, 242, 245, 0.76);
 }
 
 @media (max-width: 767px) {

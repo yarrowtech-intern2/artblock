@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "./supabase";
-import type { AppRole, Database, FeedPostType } from "./supabase.types";
+import type { AppRole, Database, FeedPostType, PostSurface } from "./supabase.types";
 import type {
   DirectMessage,
   FeedComment,
@@ -12,6 +12,7 @@ import type {
   PublicProfile,
   PublicCreatorProfile,
   ProfileVisibility,
+  ShortPost,
   UserSettings
 } from "../types/auth";
 
@@ -256,6 +257,67 @@ export const verifyArtistVerificationPayment = async (input: {
   }
 
   const { data, error } = await supabase.functions.invoke("verify-artist-verification-payment", {
+    body: input
+  });
+
+  return {
+    data: (data ?? null) as { verified: boolean } | null,
+    error:
+      (typeof data === "object" && data && "error" in data && typeof data.error === "string"
+        ? data.error
+        : null) ??
+      error?.message ??
+      null
+  };
+};
+
+export const createArtistTipOrder = async (input: {
+  postId: string;
+  recipientId: string;
+  amountRupees: number;
+  message?: string | null;
+}) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase.functions.invoke("create-artist-tip-order", {
+    body: input
+  });
+
+  return {
+    data: (data ?? null) as
+      | {
+          orderId: string;
+          amount: number;
+          currency: string;
+          keyId: string;
+          recipientName: string;
+        }
+      | null,
+    error:
+      (typeof data === "object" && data && "error" in data && typeof data.error === "string"
+        ? data.error
+        : null) ??
+      error?.message ??
+      null
+  };
+};
+
+export const verifyArtistTipPayment = async (input: {
+  orderId: string;
+  paymentId: string;
+  signature: string;
+}) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase.functions.invoke("verify-artist-tip-payment", {
     body: input
   });
 
@@ -902,15 +964,24 @@ export const uploadPostMedia = async (userId: string, file: File) => {
   }
 
   const { data } = supabase.storage.from("post-media").getPublicUrl(path);
-  return { data: data.publicUrl, error: null };
+  return { data: { publicUrl: data.publicUrl, path }, error: null };
 };
 
 type CreateFeedPostInput = {
   postType: FeedPostType;
+  surface?: PostSurface;
   title?: string | null;
   body?: string | null;
   plainBody?: string | null;
   mediaUrl?: string | null;
+  thumbnailUrl?: string | null;
+  mediaStoragePath?: string | null;
+  thumbnailStoragePath?: string | null;
+  mediaDurationSeconds?: number | null;
+  mediaWidth?: number | null;
+  mediaHeight?: number | null;
+  compressionStatus?: "original" | "compressed";
+  tipEnabled?: boolean;
   isPublished?: boolean;
   pollOptions?: string[];
 };
@@ -925,9 +996,18 @@ export const createFeedPost = async (userId: string, input: CreateFeedPostInput)
   const payload: Database["public"]["Tables"]["posts"]["Insert"] = {
     author_id: userId,
     post_type: input.postType,
+    surface: input.surface ?? "feed",
     title: input.title ?? null,
     body: input.body ?? null,
     media_url: input.mediaUrl ?? null,
+    thumbnail_url: input.thumbnailUrl ?? null,
+    media_storage_path: input.mediaStoragePath ?? null,
+    thumbnail_storage_path: input.thumbnailStoragePath ?? null,
+    media_duration_seconds: input.mediaDurationSeconds ?? null,
+    media_width: input.mediaWidth ?? null,
+    media_height: input.mediaHeight ?? null,
+    compression_status: input.compressionStatus ?? "original",
+    tip_enabled: input.tipEnabled ?? true,
     caption: input.postType === "image" || input.postType === "video" ? input.plainBody ?? input.body ?? null : null,
     is_published: input.isPublished ?? true
   };
@@ -1025,6 +1105,30 @@ export const togglePostSave = async (postId: string, userId: string, currentlySa
   }).insert({
     post_id: postId,
     user_id: userId
+  });
+
+  return { error: error?.message ?? null };
+};
+
+export const recordPostShare = async (
+  postId: string,
+  userId: string,
+  platform: "system" | "native-share" | "copy-link" = "system"
+) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { error } = await (supabase.from("post_shares") as never as {
+    insert: (
+      values: Database["public"]["Tables"]["post_shares"]["Insert"]
+    ) => Promise<{ error: { message: string } | null }>;
+  }).insert({
+    post_id: postId,
+    user_id: userId,
+    platform
   });
 
   return { error: error?.message ?? null };
@@ -1132,9 +1236,13 @@ export const voteOnPoll = async (postId: string, optionId: string, userId: strin
   return { error: error?.message ?? null };
 };
 
+type HydratablePostRow =
+  | Database["public"]["Views"]["feed_posts"]["Row"]
+  | Database["public"]["Views"]["short_posts"]["Row"];
+
 const hydrateFeedPosts = async (
   viewerId: string,
-  postsData: Database["public"]["Views"]["feed_posts"]["Row"][]
+  postsData: HydratablePostRow[]
 ) => {
   const supabase = getSupabaseClient();
 
@@ -1142,7 +1250,7 @@ const hydrateFeedPosts = async (
     return { data: [] as FeedPost[], error: "Supabase is not configured." };
   }
 
-  const basePosts = ((postsData ?? []) as Database["public"]["Views"]["feed_posts"]["Row"][])
+  const basePosts = ((postsData ?? []) as HydratablePostRow[])
     .filter(
       (row) =>
         row.id &&
@@ -1155,9 +1263,17 @@ const hydrateFeedPosts = async (
       id: row.id!,
       author_id: row.author_id!,
       post_type: row.post_type!,
+      surface: (row.surface ?? "feed") as PostSurface,
       title: row.title,
       body: row.body,
       media_url: row.media_url,
+      thumbnail_url: row.thumbnail_url ?? null,
+      media_duration_seconds: row.media_duration_seconds ?? null,
+      media_width: row.media_width ?? null,
+      media_height: row.media_height ?? null,
+      tip_enabled: Boolean(row.tip_enabled),
+      share_count: Number(row.share_count ?? 0),
+      tip_total_paise: Number(row.tip_total_paise ?? 0),
       created_at: row.created_at!,
       is_pinned: Boolean(row.is_pinned),
       full_name: row.full_name!,
@@ -1205,7 +1321,9 @@ const hydrateFeedPosts = async (
         row.post_id!,
         {
           like_count: Number(row.like_count ?? 0),
-          comment_count: Number(row.comment_count ?? 0)
+          comment_count: Number(row.comment_count ?? 0),
+          share_count: Number(row.share_count ?? 0),
+          tip_total_paise: Number(row.tip_total_paise ?? 0)
         }
       ]))
   );
@@ -1276,6 +1394,8 @@ const hydrateFeedPosts = async (
         author_role: roleMap.get(post.author_id) ?? "visitor",
         like_count: statsMap.get(post.id)?.like_count ?? 0,
         comment_count: statsMap.get(post.id)?.comment_count ?? 0,
+        share_count: statsMap.get(post.id)?.share_count ?? post.share_count ?? 0,
+        tip_total_paise: statsMap.get(post.id)?.tip_total_paise ?? post.tip_total_paise ?? 0,
         liked_by_viewer: likedSet.has(post.id),
         saved_by_viewer: savedSet.has(post.id),
         poll_options: (pollOptionsMap.get(post.id) ?? []).sort((a, b) => a.position - b.position),
@@ -1410,6 +1530,40 @@ export const fetchFeedPosts = async (
     data: hydrated.data,
     error: hydrated.error,
     hasMore: ((postsData ?? []) as Database["public"]["Views"]["feed_posts"]["Row"][]).length > pageSize
+  };
+};
+
+export const fetchShortPosts = async (
+  viewerId: string,
+  options: FetchFeedPostsOptions = {}
+) => {
+  const supabase = getSupabaseClient();
+  const page = options.page ?? 0;
+  const pageSize = options.pageSize ?? 4;
+  const rangeFrom = page * pageSize;
+  const rangeTo = rangeFrom + pageSize;
+
+  if (!supabase) {
+    return { data: [] as ShortPost[], error: "Supabase is not configured.", hasMore: false };
+  }
+
+  const { data: postsData, error } = await supabase
+    .from("short_posts")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .range(rangeFrom, rangeTo);
+
+  if (error) {
+    return { data: [] as ShortPost[], error: error.message, hasMore: false };
+  }
+
+  const pagedPosts = ((postsData ?? []) as Database["public"]["Views"]["short_posts"]["Row"][]).slice(0, pageSize);
+  const hydrated = await hydrateFeedPosts(viewerId, pagedPosts);
+
+  return {
+    data: hydrated.data as ShortPost[],
+    error: hydrated.error,
+    hasMore: ((postsData ?? []) as Database["public"]["Views"]["short_posts"]["Row"][]).length > pageSize
   };
 };
 

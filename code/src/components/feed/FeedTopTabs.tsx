@@ -72,7 +72,7 @@ export const FeedTopTabs = ({
   };
 
   return (
-    <div className={`feed-tabs${sticky ? "" : " feed-tabs--static"}`} role="tablist">
+    <div className={`feed-tabs${sticky ? " feed-tabs--pinned" : " feed-tabs--static"}`} role="tablist">
       <div className="feed-tabs__list">
         {FEED_TABS.map((tab) => {
           const isActive = !isShortsRoute && activeFeedScope === tab.value;

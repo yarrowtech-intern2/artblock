@@ -1106,6 +1106,17 @@
   color: #f8fafc;
 }
 
+[data-theme="dark"] .public-profile-stat--followers strong,
+[data-theme="dark"] .public-profile-stat--subs strong,
+[data-theme="amoled"] .public-profile-stat--followers strong,
+[data-theme="amoled"] .public-profile-stat--subs strong {
+  background: linear-gradient(135deg, #4c1d95 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
 [data-theme="dark"] .public-profile-sheet__panel,
 [data-theme="amoled"] .public-profile-sheet__panel {
   border-color: rgba(165, 180, 252, 0.18);

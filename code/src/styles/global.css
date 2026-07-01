@@ -5761,6 +5761,15 @@ img {
   line-height: 1;
 }
 
+.public-profile-stat--followers strong,
+.public-profile-stat--subs strong {
+  background: linear-gradient(135deg, #4c1d95 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
 .public-profile-stat > span:last-child {
   color: var(--copy-muted);
   font-size: 0.84rem;

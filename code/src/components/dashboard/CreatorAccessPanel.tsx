@@ -115,16 +115,13 @@ export const CreatorAccessPanel = ({
   };
 
   if (profile.role !== "creator") {
-    return (
+      return (
       <article className="dashboard-card creator-access-card">
         <div className="creator-access-card__header">
           <div>
             <span className="section-heading__eyebrow">Artist Upgrade</span>
-            <h2>Convert this account into an artist profile</h2>
-            <p>
-              Your current visitor account stays the same. This upgrade unlocks the creator page,
-              publishing tools, and later verification on the same login.
-            </p>
+            <h2>Upgrade to artist</h2>
+            <p>Unlock the creator page, publishing, and verification on this account.</p>
           </div>
           <div className="creator-access-card__status">
             <span className="creator-access-pill">Default: Visitor</span>
@@ -134,11 +131,11 @@ export const CreatorAccessPanel = ({
         {error ? <div className="auth-message auth-message--error">{error}</div> : null}
         {message ? <div className="auth-message auth-message--info">{message}</div> : null}
 
-        <div className="creator-access-card__body">
-          <div className="creator-access-card__meta">
-            <strong>Suggested artist page</strong>
-            <span>{suggestedSlug ? `/creators/${suggestedSlug}` : "A slug will be generated automatically."}</span>
-          </div>
+      <div className="creator-access-card__body">
+        <div className="creator-access-card__meta">
+          <strong>Suggested page</strong>
+          <span>{suggestedSlug ? `/creators/${suggestedSlug}` : "A slug will be generated automatically."}</span>
+        </div>
           <button className="solid-button" disabled={isConverting} onClick={() => void handleConvert()} type="button">
             {isConverting ? "Converting..." : "Convert to Artist"}
           </button>
@@ -152,11 +149,8 @@ export const CreatorAccessPanel = ({
       <div className="creator-access-card__header">
         <div>
           <span className="section-heading__eyebrow">Original Artist Badge</span>
-          <h2>Verify this creator identity</h2>
-          <p>
-            Verified artists rank above other creators in discovery and carry the gold star badge
-            beside their name across the platform.
-          </p>
+          <h2>Artist verification</h2>
+          <p>Enable the verified badge on this creator account.</p>
         </div>
         <div className="creator-access-card__status">
           {profile.is_verified_artist ? (
@@ -197,11 +191,8 @@ export const CreatorAccessPanel = ({
         ) : (
           <>
             <div className="creator-access-card__meta">
-              <strong>One-time verification fee</strong>
-              <span>
-                Test-mode Razorpay checkout. Successful payment marks this account verified
-                immediately.
-              </span>
+              <strong>One-time fee</strong>
+              <span>Test-mode Razorpay checkout marks this account verified after payment.</span>
             </div>
             <button
               className="solid-button"

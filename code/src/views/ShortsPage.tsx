@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ShortCard } from "../components/shorts/ShortCard";
-import { ShortsComposer } from "../components/shorts/ShortsComposer";
 import {
   addComment,
   createArtistTipOrder,
@@ -18,7 +17,6 @@ const TIP_PRESETS = [100, 250, 500, 1000];
 export const ShortsPage = () => {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [posts, setPosts] = useState<ShortPost[]>([]);
   const [isLoading, setLoading] = useState(true);
   const [isLoadingMore, setLoadingMore] = useState(false);
@@ -38,7 +36,6 @@ export const ShortsPage = () => {
   const itemNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
   const feedRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const isComposerOpen = searchParams.get("compose") === "1";
 
   const commentPost = useMemo(
     () => posts.find((post) => post.id === commentPostId) ?? null,
@@ -48,18 +45,6 @@ export const ShortsPage = () => {
     () => posts.find((post) => post.id === tipPostId) ?? null,
     [posts, tipPostId]
   );
-
-  const syncComposerQuery = (nextOpen: boolean) => {
-    const nextParams = new URLSearchParams(searchParams);
-
-    if (nextOpen) {
-      nextParams.set("compose", "1");
-    } else {
-      nextParams.delete("compose");
-    }
-
-    setSearchParams(nextParams, { replace: true });
-  };
 
   const loadShorts = async ({
     page: nextPage = 0,
@@ -302,11 +287,11 @@ export const ShortsPage = () => {
         {!isLoading && posts.length === 0 ? (
           <div className="shorts-empty">
             <strong>No reels yet</strong>
-            <p>Upload the first short-form post from your gallery or camera.</p>
+            <p>Publish your first reel from the unified create page.</p>
             <div className="shorts-empty__actions">
-              <button className="solid-button" onClick={() => syncComposerQuery(true)} type="button">
-                Upload your first reel
-              </button>
+              <Link className="solid-button" to="/create?type=short">
+                Create reel
+              </Link>
               <Link className="ghost-button" to="/feed">
                 Back to feed
               </Link>
@@ -355,13 +340,6 @@ export const ShortsPage = () => {
           </div>
         ) : null}
       </div>
-
-      <ShortsComposer
-        isOpen={isComposerOpen}
-        onClose={() => syncComposerQuery(false)}
-        onCreated={() => loadShorts({ page: 0, append: false })}
-        userId={user?.id ?? ""}
-      />
 
       {commentPost ? (
         <div className="shorts-sheet" role="dialog" aria-modal="true" aria-labelledby="shorts-comments-title">

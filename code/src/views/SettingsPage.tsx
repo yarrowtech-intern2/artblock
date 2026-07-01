@@ -8,7 +8,6 @@ import type { InteractionPermission, ProfileVisibility } from "../types/auth";
 type ThemeOption = {
   value: Theme;
   label: string;
-  description: string;
   bg: string;
   card: string;
   bar: string;
@@ -19,7 +18,6 @@ const THEME_OPTIONS: ThemeOption[] = [
   {
     value: "light",
     label: "White",
-    description: "Clean & bright",
     bg: "#f8f8f7",
     card: "#ffffff",
     bar: "#111111",
@@ -28,7 +26,6 @@ const THEME_OPTIONS: ThemeOption[] = [
   {
     value: "dark",
     label: "Dark",
-    description: "Easy on the eyes",
     bg: "#0a0a0b",
     card: "rgba(255,255,255,0.07)",
     bar: "#f2f2f5",
@@ -37,7 +34,6 @@ const THEME_OPTIONS: ThemeOption[] = [
   {
     value: "amoled",
     label: "AMOLED",
-    description: "Pure black",
     bg: "#000000",
     card: "rgba(255,255,255,0.04)",
     bar: "#f2f2f5",
@@ -49,17 +45,17 @@ const VISIBILITY_OPTIONS: { value: ProfileVisibility; label: string; description
   {
     value: "public",
     label: "Public",
-    description: "Anyone can open your profile and published posts."
+    description: "Visible to everyone."
   },
   {
     value: "members",
     label: "Members only",
-    description: "Only signed-in members can view your profile."
+    description: "Visible to signed-in members."
   },
   {
     value: "private",
     label: "Private",
-    description: "Only you can view your profile page."
+    description: "Visible only to you."
   }
 ];
 
@@ -75,13 +71,13 @@ const INTERACTION_OPTIONS: {
   },
   {
     value: "followers",
-    label: "Followers only",
-    description: "Only people following you can interact."
+    label: "Followers",
+    description: "Only followers can interact."
   },
   {
     value: "nobody",
     label: "Nobody",
-    description: "Disable this interaction across the app."
+    description: "Disable this interaction."
   }
 ];
 
@@ -208,10 +204,9 @@ export const SettingsPage = () => {
   return (
     <section className="settings-page">
       <header className="settings-page__header">
-        <div>
-          <span className="section-heading__eyebrow">System Controls</span>
-          <h1>Settings</h1>
-          <p>Configure how your account behaves across ArtBlock.</p>
+        <div className="settings-page__title">
+          <span className="section-heading__eyebrow">Settings</span>
+          <h1>Account controls</h1>
         </div>
         <div className="settings-page__header-actions">
           <Link className="ghost-button" to="/dashboard">
@@ -228,9 +223,12 @@ export const SettingsPage = () => {
 
       <div className="settings-grid">
         <article className="dashboard-card settings-card">
-          <span className="section-heading__eyebrow">Appearance</span>
-          <h2>Theme</h2>
-          <p>Choose how the entire app looks on this device.</p>
+          <div className="settings-card__header">
+            <div className="settings-card__title">
+              <span className="section-heading__eyebrow">Appearance</span>
+              <h2>Theme</h2>
+            </div>
+          </div>
 
           <div className="theme-sheet__options settings-theme-grid">
             {THEME_OPTIONS.map((option) => {
@@ -260,7 +258,6 @@ export const SettingsPage = () => {
                     </div>
                   </div>
                   <span className="theme-option__label">{option.label}</span>
-                  <span className="theme-option__desc">{option.description}</span>
                 </button>
               );
             })}
@@ -268,14 +265,17 @@ export const SettingsPage = () => {
         </article>
 
         <article className="dashboard-card settings-card">
-          <span className="section-heading__eyebrow">Session</span>
-          <h2>Sign-in behavior</h2>
-          <p>Control whether your login persists across browser restarts.</p>
+          <div className="settings-card__header">
+            <div className="settings-card__title">
+              <span className="section-heading__eyebrow">Session</span>
+              <h2>Sign-in behavior</h2>
+            </div>
+          </div>
 
-          <label className="settings-toggle">
+          <label className="settings-toggle settings-toggle--switch">
             <div>
               <strong>Keep me signed in</strong>
-              <span>Turn this off to end your session when the browser is closed.</span>
+              <span>Stay signed in after closing the browser.</span>
             </div>
             <input
               checked={formState.keep_me_signed_in}
@@ -287,17 +287,24 @@ export const SettingsPage = () => {
               }
               type="checkbox"
             />
+            <span aria-hidden="true" className="settings-switch" />
           </label>
         </article>
 
         <article className="dashboard-card settings-card">
-          <span className="section-heading__eyebrow">Privacy</span>
-          <h2>Visibility</h2>
-          <p>Choose who can discover and open your profile surface.</p>
+          <div className="settings-card__header">
+            <div className="settings-card__title">
+              <span className="section-heading__eyebrow">Privacy</span>
+              <h2>Profile visibility</h2>
+            </div>
+          </div>
 
           <div className="settings-choice-list">
             {VISIBILITY_OPTIONS.map((option) => (
-              <label className="settings-choice" key={option.value}>
+              <label
+                className={`settings-choice${formState.profile_visibility === option.value ? " settings-choice--active" : ""}`}
+                key={option.value}
+              >
                 <input
                   checked={formState.profile_visibility === option.value}
                   name="profile-visibility"
@@ -319,67 +326,78 @@ export const SettingsPage = () => {
         </article>
 
         <article className="dashboard-card settings-card">
-          <span className="section-heading__eyebrow">Permissions</span>
-          <h2>Interactions</h2>
-          <p>Decide who can contact you and who can comment on your posts.</p>
-
-          <div className="settings-field">
-            <label htmlFor="message-permissions">Direct messages</label>
-            <select
-              id="message-permissions"
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  message_permissions: event.target.value as InteractionPermission
-                }))
-              }
-              value={formState.message_permissions}
-            >
-              {INTERACTION_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <p>
-              {INTERACTION_OPTIONS.find((option) => option.value === formState.message_permissions)?.description}
-            </p>
+          <div className="settings-card__header">
+            <div className="settings-card__title">
+              <span className="section-heading__eyebrow">Permissions</span>
+              <h2>Interactions</h2>
+            </div>
           </div>
 
-          <div className="settings-field">
-            <label htmlFor="comment-permissions">Post comments</label>
-            <select
-              id="comment-permissions"
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  comment_permissions: event.target.value as InteractionPermission
-                }))
-              }
-              value={formState.comment_permissions}
-            >
-              {INTERACTION_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <p>
-              {INTERACTION_OPTIONS.find((option) => option.value === formState.comment_permissions)?.description}
-            </p>
+          <div className="settings-inline-fields">
+            <div className="settings-field">
+              <label>Direct messages</label>
+              <div aria-label="Direct messages permissions" className="settings-segmented" role="group">
+                {INTERACTION_OPTIONS.map((option) => (
+                  <button
+                    aria-pressed={formState.message_permissions === option.value}
+                    className={`settings-segment${formState.message_permissions === option.value ? " settings-segment--active" : ""}`}
+                    key={option.value}
+                    onClick={() =>
+                      setFormState((current) => ({
+                        ...current,
+                        message_permissions: option.value
+                      }))
+                    }
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p>
+                {INTERACTION_OPTIONS.find((option) => option.value === formState.message_permissions)?.description}
+              </p>
+            </div>
+
+            <div className="settings-field">
+              <label>Post comments</label>
+              <div aria-label="Post comment permissions" className="settings-segmented" role="group">
+                {INTERACTION_OPTIONS.map((option) => (
+                  <button
+                    aria-pressed={formState.comment_permissions === option.value}
+                    className={`settings-segment${formState.comment_permissions === option.value ? " settings-segment--active" : ""}`}
+                    key={option.value}
+                    onClick={() =>
+                      setFormState((current) => ({
+                        ...current,
+                        comment_permissions: option.value
+                      }))
+                    }
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p>
+                {INTERACTION_OPTIONS.find((option) => option.value === formState.comment_permissions)?.description}
+              </p>
+            </div>
           </div>
         </article>
 
-        <article className="dashboard-card settings-card">
-          <span className="section-heading__eyebrow">Notifications</span>
-          <h2>Activity alerts</h2>
-          <p>Choose which in-app notifications ArtBlock should create for you.</p>
+        <article className="dashboard-card settings-card settings-card--span-2">
+          <div className="settings-card__header">
+            <div className="settings-card__title">
+              <span className="section-heading__eyebrow">Notifications</span>
+              <h2>Activity alerts</h2>
+            </div>
+          </div>
 
           <div className="settings-toggle-list">
-            <label className="settings-toggle">
+            <label className="settings-toggle settings-toggle--switch">
               <div>
-                <strong>New followers</strong>
-                <span>Follower notifications on your profile.</span>
+                <strong>Followers</strong>
               </div>
               <input
                 checked={formState.notify_new_followers}
@@ -391,12 +409,12 @@ export const SettingsPage = () => {
                 }
                 type="checkbox"
               />
+              <span aria-hidden="true" className="settings-switch" />
             </label>
 
-            <label className="settings-toggle">
+            <label className="settings-toggle settings-toggle--switch">
               <div>
-                <strong>New subscribers</strong>
-                <span>Creator subscription activity.</span>
+                <strong>Subscribers</strong>
               </div>
               <input
                 checked={formState.notify_new_subscribers}
@@ -408,12 +426,12 @@ export const SettingsPage = () => {
                 }
                 type="checkbox"
               />
+              <span aria-hidden="true" className="settings-switch" />
             </label>
 
-            <label className="settings-toggle">
+            <label className="settings-toggle settings-toggle--switch">
               <div>
-                <strong>New messages</strong>
-                <span>Direct message alerts and unread counts.</span>
+                <strong>Messages</strong>
               </div>
               <input
                 checked={formState.notify_new_messages}
@@ -425,12 +443,12 @@ export const SettingsPage = () => {
                 }
                 type="checkbox"
               />
+              <span aria-hidden="true" className="settings-switch" />
             </label>
 
-            <label className="settings-toggle">
+            <label className="settings-toggle settings-toggle--switch">
               <div>
-                <strong>Post likes</strong>
-                <span>When someone likes your content.</span>
+                <strong>Likes</strong>
               </div>
               <input
                 checked={formState.notify_post_likes}
@@ -442,12 +460,12 @@ export const SettingsPage = () => {
                 }
                 type="checkbox"
               />
+              <span aria-hidden="true" className="settings-switch" />
             </label>
 
-            <label className="settings-toggle">
+            <label className="settings-toggle settings-toggle--switch">
               <div>
-                <strong>Post comments</strong>
-                <span>When someone comments on your posts.</span>
+                <strong>Comments</strong>
               </div>
               <input
                 checked={formState.notify_post_comments}
@@ -459,14 +477,19 @@ export const SettingsPage = () => {
                 }
                 type="checkbox"
               />
+              <span aria-hidden="true" className="settings-switch" />
             </label>
           </div>
         </article>
 
-        <article className="dashboard-card settings-card settings-card--danger">
-          <span className="section-heading__eyebrow">Security</span>
-          <h2>Account actions</h2>
-          <p>Use logout for normal exits. Deactivate or delete only when you want to shut down this account.</p>
+        <article className="dashboard-card settings-card settings-card--danger settings-card--span-2">
+          <div className="settings-card__header">
+            <div className="settings-card__title">
+              <span className="section-heading__eyebrow">Account</span>
+              <h2>Account actions</h2>
+            </div>
+            <p className="settings-card__meta">Logout, deactivate, or permanently delete this account.</p>
+          </div>
 
           <div className="settings-danger-actions">
             <button className="ghost-button" onClick={() => void handleLogout()} type="button">

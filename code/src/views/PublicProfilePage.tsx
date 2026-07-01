@@ -1,22 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ProfileAvatar } from "../components/shared/ProfileAvatar";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { getIdentityNameClass } from "../lib/identity";
-import { getPostContentText } from "../lib/postRichContent";
 import {
-  deletePost,
+  fetchProfileFollowers,
   fetchProfilePosts,
   fetchProfileRelationshipState,
+  fetchProfileSubscribers,
   fetchPublicProfileById,
   fetchPublicProfileBySlug,
   openDirectThread,
   toggleCreatorSubscription,
-  toggleFollowProfile,
-  togglePinnedPost
+  toggleFollowProfile
 } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
-import type { FeedPost, ProfileRelationshipState, PublicProfile } from "../types/auth";
+import type { FeedPost, ProfileConnectionItem, ProfileRelationshipState, PublicProfile } from "../types/auth";
 import type { ProfileGender } from "../lib/supabase.types";
 
 const formatCount = (value: number) =>
@@ -82,84 +81,41 @@ const ProfileStatIcon = ({ kind }: { kind: ProfileStatIconKind }) => {
 };
 
 type ProfilePostTileProps = {
-  canDelete: boolean;
-  canPin: boolean;
-  isDeleting: boolean;
-  isPinning: boolean;
-  onDelete: (post: FeedPost) => void;
-  onTogglePin: (post: FeedPost) => void;
+  onOpen: (post: FeedPost) => void;
   post: FeedPost;
 };
 
-const ProfilePostTile = ({
-  canDelete,
-  canPin,
-  isDeleting,
-  isPinning,
-  onDelete,
-  onTogglePin,
-  post
-}: ProfilePostTileProps) => {
-  const postContent = getPostContentText(post.title, post.body);
-  const isMediaPost =
-    (post.post_type === "image" || post.post_type === "video") && Boolean(post.media_url);
-  const fallbackTitle =
-    postContent.title ??
-    (post.post_type === "poll" ? "Poll" : post.post_type === "text" ? "Note" : "Post");
-  const fallbackBody = postContent.body ?? post.headline ?? "";
+type ProfileDirectoryKind = "followers" | "subs";
+
+const ProfilePostTile = ({ onOpen, post }: ProfilePostTileProps) => {
+  const thumbnailSrc =
+    post.post_type === "video"
+      ? post.thumbnail_url ?? post.media_url
+      : post.post_type === "image"
+        ? post.media_url
+        : post.thumbnail_url ?? null;
+  const thumbnailLabel =
+    post.post_type === "poll" ? "poll post" : post.post_type === "text" ? "note post" : "post";
 
   return (
-    <article className={`public-post-tile public-post-tile--${post.post_type}`}>
-      {post.post_type === "image" && post.media_url ? (
-        <img alt={fallbackTitle} className="public-post-tile__media" src={post.media_url} />
+    <button
+      aria-label={`Open ${thumbnailLabel} from ${post.full_name}`}
+      className={`public-post-tile public-post-tile--${post.post_type}`}
+      onClick={() => onOpen(post)}
+      type="button"
+    >
+      {thumbnailSrc ? (
+        <img alt="" aria-hidden="true" className="public-post-tile__media" src={thumbnailSrc} />
       ) : null}
 
-      {post.post_type === "video" && post.media_url ? (
-        <video className="public-post-tile__media" muted preload="metadata" src={post.media_url} />
+      {!thumbnailSrc && post.post_type === "video" && post.media_url ? (
+        <video aria-hidden="true" className="public-post-tile__media public-post-tile__media--video" muted preload="metadata" src={post.media_url} />
       ) : null}
 
-      {post.post_type === "text" || post.post_type === "poll" || !post.media_url ? (
-        <div className="public-post-tile__text">
-          <span>{post.post_type === "poll" ? "Poll" : post.post_type === "text" ? "Note" : "Post"}</span>
-          <strong>{fallbackTitle}</strong>
-          {fallbackBody ? <p>{fallbackBody}</p> : null}
-        </div>
+      {!thumbnailSrc && post.post_type !== "video" ? (
+        <div className={`public-post-tile__placeholder public-post-tile__placeholder--${post.post_type}`} aria-hidden="true" />
       ) : null}
-
-      {post.is_pinned ? <span className="public-post-tile__pin">Pinned</span> : null}
-
-      {!isMediaPost ? (
-        <div className="public-post-tile__overlay" aria-hidden="true">
-          <span>{formatCount(post.like_count)} likes</span>
-          <span>{formatCount(post.comment_count)} comments</span>
-        </div>
-      ) : null}
-
-      {canDelete || canPin ? (
-        <div className="public-post-tile__actions">
-          {canPin ? (
-            <button
-              className="public-post-tile__pin-action"
-              disabled={isPinning || isDeleting}
-              onClick={() => onTogglePin(post)}
-              type="button"
-            >
-              {isPinning ? "..." : post.is_pinned ? "Unpin" : "Pin"}
-            </button>
-          ) : null}
-          {canDelete ? (
-            <button
-              className="public-post-tile__delete-action"
-              disabled={isDeleting || isPinning}
-              onClick={() => onDelete(post)}
-              type="button"
-            >
-              {isDeleting ? "Deleting" : "Delete"}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-    </article>
+    </button>
   );
 };
 
@@ -211,6 +167,8 @@ export const PublicProfilePage = () => {
   const { id, slug } = useParams();
   const navigate = useNavigate();
   const { status, user } = useAuth();
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const postsGridRef = useRef<HTMLDivElement | null>(null);
   const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [relationship, setRelationship] = useState<ProfileRelationshipState>({
@@ -219,10 +177,13 @@ export const PublicProfilePage = () => {
   });
   const [pageStatus, setPageStatus] = useState<"loading" | "ready" | "missing">("loading");
   const [isMutating, setMutating] = useState(false);
-  const [isPinningPostId, setPinningPostId] = useState<string | null>(null);
-  const [isDeletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [activeVerifiedTooltip, setActiveVerifiedTooltip] = useState<"name" | "badge" | null>(null);
+  const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [activeDirectory, setActiveDirectory] = useState<ProfileDirectoryKind | null>(null);
+  const [directoryItems, setDirectoryItems] = useState<ProfileConnectionItem[]>([]);
+  const [isDirectoryLoading, setDirectoryLoading] = useState(false);
 
   const isOwnProfile = Boolean(user?.id && publicProfile?.id === user.id);
 
@@ -313,7 +274,61 @@ export const PublicProfilePage = () => {
   useEffect(() => {
     setActiveTab("all");
     setActiveVerifiedTooltip(null);
+    setProfileMenuOpen(false);
+    setActiveDirectory(null);
+    setDirectoryItems([]);
   }, [publicProfile?.id]);
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setProfileMenuOpen(false);
+        setActiveDirectory(null);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isProfileMenuOpen]);
+
+  useEffect(() => {
+    if (!activeDirectory) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveDirectory(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeDirectory]);
+
+  useEffect(() => {
+    if (!infoMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setInfoMessage(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [infoMessage]);
 
   const toggleVerifiedTooltip = (target: "name" | "badge") => {
     setActiveVerifiedTooltip((current) => (current === target ? null : target));
@@ -414,52 +429,84 @@ export const PublicProfilePage = () => {
     navigate(`/messages?thread=${result.data}`);
   };
 
-  const handleTogglePin = async (post: FeedPost) => {
-    if (!user) {
-      return;
-    }
-
-    setPinningPostId(post.id);
-    setError(null);
-    const result = await togglePinnedPost(post.id, user.id, post.is_pinned);
-    setPinningPostId(null);
-
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-
-    await loadProfile();
+  const handleOpenPost = (post: FeedPost) => {
+    navigate(`/feed?post=${post.id}`);
   };
 
-  const handleDeletePost = async (post: FeedPost) => {
-    if (!user) {
+  const handleMenuNavigate = (target: string) => {
+    setProfileMenuOpen(false);
+    navigate(target);
+  };
+
+  const handleShareProfile = async () => {
+    if (typeof window === "undefined" || !publicProfile) {
       return;
     }
 
-    if (!window.confirm("Delete this post? This action cannot be undone.")) {
+    const permalink = window.location.href;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: publicProfile.full_name,
+          text: `Check out ${publicProfile.full_name} on Artblock.`,
+          url: permalink
+        });
+        setInfoMessage("Profile shared.");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(permalink);
+        setInfoMessage("Profile link copied.");
+      } else {
+        throw new Error("Sharing is not supported on this device.");
+      }
+
+      setError(null);
+    } catch (shareError) {
+      const message =
+        shareError instanceof Error && shareError.message
+          ? shareError.message
+          : "Unable to share this profile right now.";
+      setError(message);
+    } finally {
+      setProfileMenuOpen(false);
+    }
+  };
+
+  const handleOpenDirectory = async (kind: ProfileDirectoryKind) => {
+    if (!publicProfile) {
       return;
     }
 
-    setDeletingPostId(post.id);
-    setError(null);
-    const result = await deletePost(post.id, user.id);
-    setDeletingPostId(null);
+    setProfileMenuOpen(false);
+    setActiveDirectory(kind);
+    setDirectoryItems([]);
+    setDirectoryLoading(true);
+
+    const result =
+      kind === "followers"
+        ? await fetchProfileFollowers(publicProfile.id)
+        : await fetchProfileSubscribers(publicProfile.id);
+
+    setDirectoryLoading(false);
 
     if (result.error) {
       setError(result.error);
       return;
     }
 
-    setPosts((current) => current.filter((item) => item.id !== post.id));
-    setPublicProfile((current) =>
-      current
-        ? {
-            ...current,
-            post_count: Math.max(0, current.post_count - 1)
-          }
-        : current
-    );
+    setDirectoryItems(result.data);
+  };
+
+  const handleStatAction = (kind: ProfileStatIconKind) => {
+    if (kind === "posts") {
+      setActiveTab("all");
+      postsGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    if (kind === "followers" || kind === "subs") {
+      void handleOpenDirectory(kind);
+    }
   };
 
   if (pageStatus === "loading") {
@@ -503,6 +550,9 @@ export const PublicProfilePage = () => {
   const verifiedArtistTooltip = publicProfile.is_verified_artist
     ? getVerifiedArtistTooltip(publicProfile.gender)
     : null;
+  const dashboardTarget = publicProfile.role === "creator" ? "/dashboard#posting" : "/dashboard";
+  const directoryTitle = activeDirectory === "subs" ? "Subscribers" : "Followers";
+  const directoryCount = activeDirectory === "subs" ? publicProfile.subscriber_count : publicProfile.follower_count;
 
   return (
     <section className="public-page public-page--instagram public-page--showcase">
@@ -523,51 +573,81 @@ export const PublicProfilePage = () => {
           </div>
 
           <div className="public-profile-main">
-            <div className="public-profile-heading-row">
-              <h1 className="public-profile-username">
-                {verifiedArtistTooltip ? (
-                  <button
-                    aria-label={`${publicProfile.full_name}. ${verifiedArtistTooltip}`}
-                    className={`verified-tooltip-trigger public-profile-name-tooltip-trigger${
-                      activeVerifiedTooltip === "name" ? " is-active" : ""
-                    }`}
-                    data-tooltip={verifiedArtistTooltip}
-                    onBlur={() => setActiveVerifiedTooltip(null)}
-                    onClick={() => toggleVerifiedTooltip("name")}
-                    type="button"
-                  >
+            <div className={`public-profile-heading-row${isOwnProfile ? " public-profile-heading-row--owner" : ""}`}>
+              <div className="public-profile-title-line">
+                <h1 className="public-profile-username">
+                  {verifiedArtistTooltip ? (
+                    <button
+                      aria-label={`${publicProfile.full_name}. ${verifiedArtistTooltip}`}
+                      className={`verified-tooltip-trigger public-profile-name-tooltip-trigger${
+                        activeVerifiedTooltip === "name" ? " is-active" : ""
+                      }`}
+                      data-tooltip={verifiedArtistTooltip}
+                      onBlur={() => setActiveVerifiedTooltip(null)}
+                      onClick={() => toggleVerifiedTooltip("name")}
+                      type="button"
+                    >
+                      <span>{publicProfile.full_name}</span>
+                    </button>
+                  ) : (
                     <span>{publicProfile.full_name}</span>
-                  </button>
-                ) : (
-                  <span>{publicProfile.full_name}</span>
-                )}
-                {verifiedArtistTooltip ? (
-                  <button
-                    aria-label={verifiedArtistTooltip}
-                    className={`verified-tooltip-trigger public-profile-badge-tooltip-trigger${
-                      activeVerifiedTooltip === "badge" ? " is-active" : ""
-                    }`}
-                    data-tooltip={verifiedArtistTooltip}
-                    onBlur={() => setActiveVerifiedTooltip(null)}
-                    onClick={() => toggleVerifiedTooltip("badge")}
-                    type="button"
-                  >
-                    <VerifiedArtistBadge label={verifiedArtistTooltip} />
-                  </button>
-                ) : null}
-              </h1>
+                  )}
+                  {verifiedArtistTooltip ? (
+                    <button
+                      aria-label={verifiedArtistTooltip}
+                      className={`verified-tooltip-trigger public-profile-badge-tooltip-trigger${
+                        activeVerifiedTooltip === "badge" ? " is-active" : ""
+                      }`}
+                      data-tooltip={verifiedArtistTooltip}
+                      onBlur={() => setActiveVerifiedTooltip(null)}
+                      onClick={() => toggleVerifiedTooltip("badge")}
+                      type="button"
+                    >
+                      <VerifiedArtistBadge label={verifiedArtistTooltip} />
+                    </button>
+                  ) : null}
+                </h1>
+                <span className="public-profile-role">
+                  {publicProfile.role === "creator" ? "Artist" : "Member"}
+                </span>
+              </div>
 
-              <div className="public-profile-action-slot">
+              <div className="public-profile-action-slot" ref={profileMenuRef}>
                 {isOwnProfile ? (
-                  <Link aria-label="Edit profile" className="public-profile-edit-icon" to="/dashboard">
-                    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
-                      <path
-                        d="m5 19 3.8-.8L18.6 8.4a2 2 0 0 0 0-2.8l-.2-.2a2 2 0 0 0-2.8 0L5.8 15.2 5 19Z"
-                        fill="currentColor"
-                      />
-                      <path d="m14.5 6.5 3 3" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-                    </svg>
-                  </Link>
+                  <div className="public-profile-menu-shell">
+                    <button
+                      aria-expanded={isProfileMenuOpen}
+                      aria-haspopup="menu"
+                      aria-label="Open profile actions"
+                      className={`public-profile-kebab${isProfileMenuOpen ? " is-active" : ""}`}
+                      onClick={() => setProfileMenuOpen((current) => !current)}
+                      type="button"
+                    >
+                      <span />
+                      <span />
+                      <span />
+                    </button>
+                    <div className={`public-profile-menu${isProfileMenuOpen ? " public-profile-menu--open" : ""}`} role="menu">
+                      <button className="public-profile-menu__item" onClick={() => handleMenuNavigate("/dashboard")} role="menuitem" type="button">
+                        <span>Edit profile</span>
+                        <small>Open the full profile editor</small>
+                      </button>
+                      {publicProfile.role === "creator" ? (
+                        <button className="public-profile-menu__item" onClick={() => handleMenuNavigate(dashboardTarget)} role="menuitem" type="button">
+                          <span>Dashboard</span>
+                          <small>Jump to your publishing workspace</small>
+                        </button>
+                      ) : null}
+                      <button className="public-profile-menu__item" onClick={() => handleMenuNavigate("/settings")} role="menuitem" type="button">
+                        <span>Settings</span>
+                        <small>Privacy, notifications, and account</small>
+                      </button>
+                      <button className="public-profile-menu__item" onClick={() => void handleShareProfile()} role="menuitem" type="button">
+                        <span>Share profile</span>
+                        <small>Send or copy your public profile link</small>
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="public-profile-actions">
                     <button
@@ -603,21 +683,22 @@ export const PublicProfilePage = () => {
               </div>
             </div>
 
-            <dl className="public-profile-stats">
+            <div className="public-profile-stats">
               {profileStats.map((stat) => (
-                <div className={`public-profile-stat public-profile-stat--${stat.kind}`} key={stat.kind}>
+                <button
+                  className={`public-profile-stat public-profile-stat--${stat.kind}`}
+                  key={stat.kind}
+                  onClick={() => handleStatAction(stat.kind)}
+                  type="button"
+                >
                   <span className="public-profile-stat__icon">
                     <ProfileStatIcon kind={stat.kind} />
                   </span>
-                  <dt>{stat.label}</dt>
-                  <dd>{formatProfileStatCount(stat.value)}</dd>
-                </div>
+                  <strong>{formatProfileStatCount(stat.value)}</strong>
+                  <span>{stat.label}</span>
+                </button>
               ))}
-            </dl>
-
-            <p className="public-profile-role">
-              {publicProfile.role === "creator" ? "Artist" : "Member"}
-            </p>
+            </div>
             <div className="public-profile-bio">
               <p>
                 {publicProfile.about ??
@@ -642,6 +723,7 @@ export const PublicProfilePage = () => {
       </header>
 
       {error ? <div className="auth-message auth-message--error">{error}</div> : null}
+      {infoMessage ? <div className="auth-message auth-message--info">{infoMessage}</div> : null}
 
       <div className="public-profile-tabbar" role="tablist">
         {contentTabs.map((tab) => (
@@ -676,21 +758,69 @@ export const PublicProfilePage = () => {
           </p>
         </div>
       ) : (
-        <div className="public-post-grid">
+        <div className="public-post-grid" ref={postsGridRef}>
           {visiblePosts.map((post) => (
             <ProfilePostTile
-              canDelete={isOwnProfile}
-              canPin={isOwnProfile && publicProfile.role === "creator"}
-              isDeleting={isDeletingPostId === post.id}
-              isPinning={isPinningPostId === post.id}
               key={post.id}
-              onDelete={(targetPost) => void handleDeletePost(targetPost)}
-              onTogglePin={(targetPost) => void handleTogglePin(targetPost)}
+              onOpen={handleOpenPost}
               post={post}
             />
           ))}
         </div>
       )}
+
+      {activeDirectory ? (
+        <div className="public-profile-sheet" role="dialog" aria-modal="true" aria-labelledby="public-profile-sheet-title">
+          <div className="public-profile-sheet__backdrop" onClick={() => setActiveDirectory(null)} />
+          <section className="public-profile-sheet__panel">
+            <div className="public-profile-sheet__header">
+              <div>
+                <h2 id="public-profile-sheet-title">{directoryTitle}</h2>
+                <p>{formatCount(directoryCount)}</p>
+              </div>
+              <button className="ghost-button" onClick={() => setActiveDirectory(null)} type="button">
+                Close
+              </button>
+            </div>
+
+            {isDirectoryLoading ? (
+              <p className="public-profile-sheet__empty">Loading {directoryTitle.toLowerCase()}...</p>
+            ) : directoryItems.length === 0 ? (
+              <p className="public-profile-sheet__empty">No {directoryTitle.toLowerCase()} yet.</p>
+            ) : (
+              <div className="public-profile-sheet__list">
+                {directoryItems.map((item) => (
+                  <button
+                    className="public-profile-sheet__item"
+                    key={item.id}
+                    onClick={() => {
+                      setActiveDirectory(null);
+                      navigate(item.creator_slug ? `/creators/${item.creator_slug}` : `/profiles/${item.id}`);
+                    }}
+                    type="button"
+                  >
+                    <ProfileAvatar
+                      alt={item.full_name}
+                      className="public-profile-sheet__avatar"
+                      name={item.full_name}
+                      src={item.avatar_url}
+                    />
+                    <div className="public-profile-sheet__copy">
+                      <strong className="profile-name-row">
+                        <span className={getIdentityNameClass(item.role)}>
+                          {item.username ? `@${item.username}` : item.full_name}
+                        </span>
+                        {item.is_verified_artist ? <VerifiedArtistBadge /> : null}
+                      </strong>
+                      <span>{item.headline ?? item.full_name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 };

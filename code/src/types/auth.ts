@@ -4,7 +4,8 @@ import type {
   FeedPostType,
   NotificationType,
   PostSurface,
-  ProfileGender
+  ProfileGender,
+  StoryMediaKind
 } from "../lib/supabase.types";
 
 export type Profile = {
@@ -105,6 +106,17 @@ export type ProfileRelationshipState = {
   is_subscribed: boolean;
 };
 
+export type ProfileConnectionItem = {
+  id: string;
+  full_name: string;
+  role: AppRole;
+  is_verified_artist: boolean;
+  username: string | null;
+  avatar_url: string | null;
+  creator_slug: string | null;
+  headline: string | null;
+};
+
 export type FeedComment = {
   id: string;
   post_id: string;
@@ -170,6 +182,57 @@ export type ShortPost = FeedPost & {
   tip_enabled: boolean;
   share_count: number;
   tip_total_paise: number;
+};
+
+export type StoryItem = {
+  id: string;
+  author_id: string;
+  media_kind: StoryMediaKind;
+  media_url: string;
+  media_storage_path: string | null;
+  thumbnail_url: string | null;
+  thumbnail_storage_path: string | null;
+  body: string | null;
+  media_duration_seconds: number | null;
+  media_width: number | null;
+  media_height: number | null;
+  compression_status: string;
+  expires_at: string;
+  created_at: string;
+  full_name: string;
+  author_role: AppRole;
+  is_verified_artist: boolean;
+  username: string | null;
+  avatar_url: string | null;
+  creator_slug: string | null;
+  headline: string | null;
+  viewed_by_viewer: boolean;
+};
+
+export type StoryGroup = {
+  author_id: string;
+  full_name: string;
+  author_role: AppRole;
+  is_verified_artist: boolean;
+  username: string | null;
+  avatar_url: string | null;
+  creator_slug: string | null;
+  headline: string | null;
+  items: StoryItem[];
+  has_unviewed: boolean;
+  latest_created_at: string;
+};
+
+export type StoryViewReceipt = {
+  id: string;
+  full_name: string;
+  role: AppRole;
+  is_verified_artist: boolean;
+  username: string | null;
+  avatar_url: string | null;
+  creator_slug: string | null;
+  headline: string | null;
+  viewed_at: string;
 };
 
 export type InboxThread = {

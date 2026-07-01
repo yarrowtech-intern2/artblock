@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { ProfileAvatar } from "../shared/ProfileAvatar";
-import { BellNavIcon, ThemeToggleIcon, BellNavIconSolid, LightbulbNavIcon } from "../shared/NavIcons";
+import { BellNavIcon, BellNavIconSolid, LightbulbNavIcon } from "../shared/NavIcons";
 import { ThemeSheet } from "../settings/ThemeSheet";
 import {
   fetchUnreadMessageCount,
@@ -12,6 +12,8 @@ import { useAuth } from "../../providers/AuthProvider";
 import { useTheme } from "../../providers/ThemeProvider";
 import logoBlack from "../../public/logo/logo-black-transparent.png";
 import logoWhite from "../../public/logo/logo-white-transparent.png";
+import settingsBlackIcon from "../../public/icons/svg/settings-black.svg";
+import settingsWhiteIcon from "../../public/icons/svg/settings-white.svg";
 
 const marketingAnchorLinks = [
   { label: "About", href: "#about" },
@@ -35,6 +37,7 @@ export const Header = () => {
     (location.pathname === "/" || location.pathname === "/classic-home");
   const { theme } = useTheme();
   const brandLogo = theme === "light" ? logoBlack : logoWhite;
+  const settingsIcon = theme === "light" ? settingsBlackIcon : settingsWhiteIcon;
 
   useEffect(() => {
     if (!isLanding) {
@@ -117,16 +120,15 @@ export const Header = () => {
             )}
           </div>
 
-          {/* Mobile: authenticated — theme button in left slot, avatar on right */}
+          {/* Mobile: authenticated — settings button in left slot, avatar on right */}
           {isAuthed ? (
-            <button
-              aria-label="Appearance settings"
-              className="header-theme-btn"
-              onClick={() => setThemeOpen(true)}
-              type="button"
+            <Link
+              aria-label="Settings"
+              className="header-theme-btn header-theme-btn--link"
+              to="/settings"
             >
-              <ThemeToggleIcon aria-hidden="true" className="header-theme-btn__icon" />
-            </button>
+              <img alt="" aria-hidden="true" className="header-theme-btn__icon" src={settingsIcon} />
+            </Link>
           ) : null}
 
           {/* Mobile: authenticated users get an avatar link; unauthenticated get hamburger */}

@@ -74,7 +74,7 @@ export const DashboardPage = () => {
   return (
     <section className="dashboard-page">
       <header className="dashboard-page__header">
-        <div>
+        <div className="dashboard-page__title">
           <span className="section-heading__eyebrow">Dashboard</span>
           <h1>{profile.role === "creator" ? "Creator Dashboard" : "Dashboard"}</h1>
           <p>
@@ -99,63 +99,107 @@ export const DashboardPage = () => {
         </div>
       </header>
 
-      <div className="dashboard-summary">
-        <article>
+      <div className="dashboard-summary dashboard-summary--compact">
+        <article className="dashboard-summary__card">
           <span>Role</span>
           <strong className="dashboard-summary__value">
             {profile.role}
             {profile.is_verified_artist ? <VerifiedArtistBadge /> : null}
           </strong>
         </article>
-        <article>
+        <article className="dashboard-summary__card">
           <span>Email</span>
           <strong>{profile.email ?? user.email ?? "Unavailable"}</strong>
         </article>
-        <article>
+        <article className="dashboard-summary__card">
           <span>Username</span>
           <strong>{profile.username ?? "Not set"}</strong>
         </article>
+        <article className="dashboard-summary__card">
+          <span>{profile.role === "creator" ? "Creator page" : "Account status"}</span>
+          <strong>
+            {profile.role === "creator"
+              ? creatorProfile?.is_published
+                ? "Published"
+                : "Draft"
+              : "Visitor"}
+          </strong>
+        </article>
       </div>
 
-      <div className="dashboard-stack">
-        <ProfileEditor profile={profile} userId={user.id} onProfileSaved={refreshProfile} />
-        <div className="dashboard-anchor-target" id="verification" ref={verificationSectionRef}>
-          <CreatorAccessPanel
-            creatorProfile={creatorProfile}
-            onRefreshCreatorProfile={loadCreatorProfile}
-            onRefreshProfile={refreshProfile}
-            profile={profile}
-          />
+      <div className="dashboard-workspace">
+        <div className="dashboard-workspace__main">
+          <ProfileEditor profile={profile} userId={user.id} onProfileSaved={refreshProfile} />
+
+          {profile.role === "creator" ? (
+            <>
+              <div className="dashboard-anchor-target dashboard-section" id="posting" ref={postingSectionRef}>
+                <div className="dashboard-section__heading">
+                  <div>
+                    <span className="section-heading__eyebrow">Publishing</span>
+                    <h2>Feed posts</h2>
+                  </div>
+                  <div className="dashboard-section__actions">
+                    <Link className="ghost-button" to="/create">
+                      Reels & Stories
+                    </Link>
+                  </div>
+                </div>
+                <PostComposer onPublished={loadCreatorProfile} showHeader={false} userId={user.id} />
+              </div>
+              <CreatorStudio
+                creatorProfile={creatorProfile}
+                defaultName={profile.full_name}
+                onSaved={loadCreatorProfile}
+                userId={user.id}
+              />
+            </>
+          ) : (
+            <article className="dashboard-card dashboard-card--compact">
+              <span className="section-heading__eyebrow">Visitor</span>
+              <h2>Account ready</h2>
+              <p>Use this account for browsing, follows, saves, and upgrades when needed.</p>
+            </article>
+          )}
         </div>
 
-        {profile.role === "creator" ? (
-          <>
-            <div className="dashboard-anchor-target" id="posting" ref={postingSectionRef}>
-              <PostComposer onPublished={loadCreatorProfile} userId={user.id} />
-            </div>
-            <CreatorStudio
+        <aside className="dashboard-workspace__side">
+          <div className="dashboard-anchor-target" id="verification" ref={verificationSectionRef}>
+            <CreatorAccessPanel
               creatorProfile={creatorProfile}
-              defaultName={profile.full_name}
-              onSaved={loadCreatorProfile}
-              userId={user.id}
+              onRefreshCreatorProfile={loadCreatorProfile}
+              onRefreshProfile={refreshProfile}
+              profile={profile}
             />
-          </>
-        ) : (
-          <article className="dashboard-card">
-            <span className="section-heading__eyebrow">Visitor Mode</span>
-            <h2>Your account core is ready</h2>
-            <p>
-              This visitor account can now branch into creator discovery, follows, saves, and
-              personalized feed features.
-            </p>
-          </article>
-        )}
+          </div>
 
-        {profile.role === "creator" && isLoadingCreatorProfile ? (
-          <article className="dashboard-card">
-            <p>Loading creator page settings...</p>
-          </article>
-        ) : null}
+          {profile.role === "creator" ? (
+            <article className="dashboard-card dashboard-card--compact dashboard-utility-card">
+              <div className="dashboard-utility-card__header">
+                <div>
+                  <span className="section-heading__eyebrow">Create</span>
+                  <h2>Shortcuts</h2>
+                </div>
+              </div>
+              <div className="dashboard-utility-card__actions">
+                <Link className="solid-button" to="/create">
+                  Open Create
+                </Link>
+                {creatorProfile?.is_published && creatorProfile.slug ? (
+                  <Link className="ghost-button" to={`/creators/${creatorProfile.slug}`}>
+                    Public page
+                  </Link>
+                ) : null}
+              </div>
+            </article>
+          ) : null}
+
+          {profile.role === "creator" && isLoadingCreatorProfile ? (
+            <article className="dashboard-card dashboard-card--compact">
+              <p>Loading creator settings...</p>
+            </article>
+          ) : null}
+        </aside>
       </div>
     </section>
   );

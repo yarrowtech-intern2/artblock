@@ -1,16 +1,18 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CampaignCard } from "../components/feed/CampaignCard";
 import { FeedCard } from "../components/feed/FeedCard";
 import { FeedTopTabs } from "../components/feed/FeedTopTabs";
+import { CreateOptionsMenu } from "../components/create/CreateOptionsMenu";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { fetchActiveCampaigns } from "../lib/admin";
 import { getIdentityNameClass } from "../lib/identity";
-import { deletePost, fetchFeedPosts, type FeedScope } from "../lib/profile";
+import { deletePost, fetchActiveStories, fetchFeedPostById, fetchFeedPosts, markStoryViewed, type FeedScope } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
 import type { Campaign } from "../types/admin";
-import type { FeedPost } from "../types/auth";
-import { useSearchParams } from "react-router-dom";
+import type { FeedPost, StoryGroup } from "../types/auth";
+import { StoriesRail } from "../components/stories/StoriesRail";
+import { StoryViewer } from "../components/stories/StoryViewer";
 
 const FEED_PAGE_SIZE = 6;
 const isFeedScope = (value: string | null): value is FeedScope =>
@@ -76,8 +78,11 @@ const FeedSkeleton = () => (
 
 export const FeedPage = () => {
   const { profile, user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialRouteScope = searchParams.get("tab");
+  const targetPostId = searchParams.get("post");
+  const targetAction = searchParams.get("action");
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [feedScope, setFeedScope] = useState<FeedScope>(
     isFeedScope(initialRouteScope) ? initialRouteScope : "for-you"
@@ -89,7 +94,10 @@ export const FeedPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [stories, setStories] = useState<StoryGroup[]>([]);
   const [campaignRotationIndex, setCampaignRotationIndex] = useState(0);
+  const [isCreateMenuOpen, setCreateMenuOpen] = useState(false);
+  const [activeStoryAuthorId, setActiveStoryAuthorId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -210,12 +218,65 @@ export const FeedPage = () => {
     });
   };
 
+  const loadStories = async () => {
+    if (!user) {
+      setStories([]);
+      return;
+    }
+
+    const result = await fetchActiveStories(user.id);
+
+    if (!result.error) {
+      setStories(result.data);
+    }
+  };
+
   useEffect(() => {
     setPosts([]);
     setPage(0);
     setHasMore(false);
     void loadFeed({ scope: feedScope, page: 0, append: false });
   }, [user?.id, feedScope]);
+
+  useEffect(() => {
+    if (!user?.id || !targetPostId || posts.some((post) => post.id === targetPostId)) {
+      return;
+    }
+
+    void fetchFeedPostById(user.id, targetPostId).then((result) => {
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      if (!result.data) {
+        return;
+      }
+
+      setPosts((current) => {
+        if (current.some((post) => post.id === result.data!.id)) {
+          return current;
+        }
+
+        return [result.data!, ...current];
+      });
+    });
+  }, [posts, targetPostId, user?.id]);
+
+  const clearNotificationTarget = () => {
+    if (!targetPostId && !targetAction) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("post");
+    nextParams.delete("action");
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  useEffect(() => {
+    void loadStories();
+  }, [user?.id]);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -244,7 +305,7 @@ export const FeedPage = () => {
         : feedScope === "saved"
           ? "Save posts from the feed to build a private reading list."
           : profile?.role === "creator"
-            ? "Create the first post below, or publish from your profile studio."
+            ? "Create the first post from the dedicated create page or your profile studio."
             : "Once creators publish content, it will appear here.";
 
   return (
@@ -308,6 +369,13 @@ export const FeedPage = () => {
             sticky
           />
 
+          <StoriesRail
+            groups={stories}
+            onCreateStory={() => navigate({ pathname: "/create", search: "?type=story" })}
+            onOpenGroup={(authorId) => setActiveStoryAuthorId(authorId)}
+            profile={profile}
+          />
+
           {error ? <div className="auth-message auth-message--error">{error}</div> : null}
 
           {isLoading ? <FeedSkeleton /> : null}
@@ -337,9 +405,14 @@ export const FeedPage = () => {
                 <CampaignCard campaign={item.campaign} key={item.key} mode="inline" />
               ) : (
                 <FeedCard
+                  autoFocusKey={
+                    item.post.id === targetPostId ? `${targetPostId}:${targetAction ?? "open"}` : null
+                  }
+                  autoOpenComments={item.post.id === targetPostId && targetAction === "comments"}
                   canDelete={item.post.author_id === user?.id}
                   isDeleting={deletingPostId === item.post.id}
                   key={item.post.id}
+                  onAutoFocusHandled={clearNotificationTarget}
                   onDelete={async (targetPost) => {
                     if (!user) {
                       return "You need to sign in to delete posts.";
@@ -390,21 +463,33 @@ export const FeedPage = () => {
           {profile?.role === "creator" ? (
             <div className="feed-rail-card feed-create-card">
               <h2>Create a Post</h2>
-              <p>Upload a reel from your library or camera.</p>
+              <p>Publish feed posts, reels, or 24-hour stories from one place.</p>
               <div className="feed-create-card__actions">
-                <Link className="solid-button" to={{ pathname: "/shorts", search: "?compose=1" }}>
+                <Link className="solid-button" to="/create">
                   Upload Content
                 </Link>
-                <Link
-                  aria-label="Upload reel"
+                <button
+                  aria-expanded={isCreateMenuOpen}
+                  aria-label="Open create menu"
                   className="feed-create-card__plus"
-                  to={{ pathname: "/shorts", search: "?compose=1" }}
+                  onClick={() => setCreateMenuOpen((current) => !current)}
+                  type="button"
                 >
                   <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
                     <line stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" x1="12" x2="12" y1="5" y2="19" />
                     <line stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" x1="5" x2="19" y1="12" y2="12" />
                   </svg>
-                </Link>
+                </button>
+              </div>
+              <div
+                aria-hidden={!isCreateMenuOpen}
+                className={`feed-create-card__menu-wrap${isCreateMenuOpen ? " feed-create-card__menu-wrap--open" : ""}`}
+              >
+                <CreateOptionsMenu
+                  className="feed-create-card__menu"
+                  compact
+                  onSelect={() => setCreateMenuOpen(false)}
+                />
               </div>
             </div>
           ) : (
@@ -435,6 +520,39 @@ export const FeedPage = () => {
           </div>
         </aside>
       </div>
+
+      <StoryViewer
+        groups={stories}
+        onClose={() => setActiveStoryAuthorId(null)}
+        onViewed={(storyId) => {
+          if (!user) {
+            return;
+          }
+
+          setStories((current) =>
+            current.map((group) => {
+              const nextItems = group.items.map((item) =>
+                item.id === storyId ? { ...item, viewed_by_viewer: true } : item
+              );
+
+              return {
+                ...group,
+                items: nextItems,
+                has_unviewed: nextItems.some((item) => !item.viewed_by_viewer)
+              };
+            })
+          );
+
+          const activeStoryAuthorId =
+            stories.find((group) => group.items.some((item) => item.id === storyId))?.author_id ?? null;
+
+          if (activeStoryAuthorId && activeStoryAuthorId !== user.id) {
+            void markStoryViewed(storyId, user.id);
+          }
+        }}
+        startingAuthorId={activeStoryAuthorId}
+        viewerId={user?.id ?? null}
+      />
     </section>
   );
 };

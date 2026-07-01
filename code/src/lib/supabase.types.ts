@@ -9,6 +9,7 @@ export type Json =
 export type AppRole = "visitor" | "creator" | "admin";
 export type FeedPostType = "image" | "video" | "poll" | "text";
 export type PostSurface = "feed" | "short";
+export type StoryMediaKind = "image" | "video";
 export type ProfileGender = "male" | "female" | "non_binary" | "prefer_not_to_say";
 export type NotificationType =
   | "new_follower"
@@ -229,6 +230,101 @@ export type Database = {
           {
             foreignKeyName: "posts_author_id_fkey";
             columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      stories: {
+        Row: {
+          id: string;
+          author_id: string;
+          media_kind: FeedPostType;
+          media_url: string;
+          media_storage_path: string | null;
+          thumbnail_url: string | null;
+          thumbnail_storage_path: string | null;
+          body: string | null;
+          media_duration_seconds: number | null;
+          media_width: number | null;
+          media_height: number | null;
+          compression_status: string;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          media_kind: FeedPostType;
+          media_url: string;
+          media_storage_path?: string | null;
+          thumbnail_url?: string | null;
+          thumbnail_storage_path?: string | null;
+          body?: string | null;
+          media_duration_seconds?: number | null;
+          media_width?: number | null;
+          media_height?: number | null;
+          compression_status?: string;
+          expires_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          author_id?: string;
+          media_kind?: FeedPostType;
+          media_url?: string;
+          media_storage_path?: string | null;
+          thumbnail_url?: string | null;
+          thumbnail_storage_path?: string | null;
+          body?: string | null;
+          media_duration_seconds?: number | null;
+          media_width?: number | null;
+          media_height?: number | null;
+          compression_status?: string;
+          expires_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stories_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      story_views: {
+        Row: {
+          story_id: string;
+          viewer_id: string;
+          viewed_at: string;
+        };
+        Insert: {
+          story_id: string;
+          viewer_id: string;
+          viewed_at?: string;
+        };
+        Update: {
+          story_id?: string;
+          viewer_id?: string;
+          viewed_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "story_views_story_id_fkey";
+            columns: ["story_id"];
+            isOneToOne: false;
+            referencedRelation: "stories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "story_views_viewer_id_fkey";
+            columns: ["viewer_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
@@ -824,6 +920,30 @@ export type Database = {
           headline: string | null;
           comment_permissions: "everyone" | "followers" | "nobody" | null;
           viewer_can_comment: boolean | null;
+        };
+      };
+      active_stories: {
+        Row: {
+          id: string | null;
+          author_id: string | null;
+          media_kind: FeedPostType | null;
+          media_url: string | null;
+          media_storage_path: string | null;
+          thumbnail_url: string | null;
+          thumbnail_storage_path: string | null;
+          body: string | null;
+          media_duration_seconds: number | null;
+          media_width: number | null;
+          media_height: number | null;
+          compression_status: string | null;
+          expires_at: string | null;
+          created_at: string | null;
+          full_name: string | null;
+          is_verified_artist: boolean | null;
+          username: string | null;
+          avatar_url: string | null;
+          creator_slug: string | null;
+          headline: string | null;
         };
       };
       post_engagement_stats: {

@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ProfileAvatar } from "../components/shared/ProfileAvatar";
 import {
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead
 } from "../lib/profile";
-import { getIdentityNameClass } from "../lib/identity";
-import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { getSupabaseClient } from "../lib/supabase";
 import { useAuth } from "../providers/AuthProvider";
 import type { NotificationItem } from "../types/auth";
@@ -27,6 +25,7 @@ export const NotificationsPage = () => {
   const [isLoading, setLoading] = useState(true);
   const [isMutating, setMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const unreadCount = items.filter((item) => !item.is_read).length;
 
   const loadNotifications = async () => {
     setLoading(true);
@@ -75,6 +74,13 @@ export const NotificationsPage = () => {
   }, [user?.id]);
 
   const handleOpen = async (item: NotificationItem) => {
+    if (item.is_read) {
+      if (item.link) {
+        navigate(item.link);
+      }
+      return;
+    }
+
     setMutating(true);
     const result = await markNotificationRead(item.id);
     setMutating(false);
@@ -109,14 +115,10 @@ export const NotificationsPage = () => {
   return (
     <section className="notifications-page">
       <div className="notifications-page__header">
-        <div>
-          <span className="section-heading__eyebrow">Notifications</span>
-          <h1>Activity inbox</h1>
-          <p>Track follows, subscriptions, messages, and engagement without leaving the app shell.</p>
-        </div>
+        <h1>Notifications</h1>
         <button
           className="ghost-button"
-          disabled={isMutating || items.every((item) => item.is_read)}
+          disabled={isMutating || unreadCount === 0}
           onClick={() => void handleMarkAllRead()}
           type="button"
         >
@@ -127,16 +129,12 @@ export const NotificationsPage = () => {
       {error ? <div className="auth-message auth-message--error">{error}</div> : null}
 
       {isLoading ? (
-        <div className="dashboard-card">
+        <div className="dashboard-card dashboard-card--compact">
           <p>Loading notifications...</p>
         </div>
       ) : items.length === 0 ? (
-        <div className="empty-feed">
-          <h2>No notifications yet.</h2>
-          <p>Once people interact with your profile, feed, or inbox, updates will appear here.</p>
-          <Link className="solid-button" to="/feed">
-            Back to feed
-          </Link>
+        <div className="dashboard-card dashboard-card--compact">
+          <p>No notifications yet.</p>
         </div>
       ) : (
         <div className="notifications-list">
@@ -155,20 +153,13 @@ export const NotificationsPage = () => {
                   src={item.actor_avatar_url}
                 />
               </div>
-                <div className="notification-card__body">
-                  <div className="notification-card__row">
-                    <strong>{item.title}</strong>
-                    <span>{formatDate(item.created_at)}</span>
-                  </div>
-                <p>{item.body}</p>
-                {item.actor_full_name ? (
-                  <span className="notification-card__actor profile-name-row">
-                    <span className={getIdentityNameClass(item.actor_role)}>
-                      {item.actor_username ? `@${item.actor_username}` : item.actor_full_name}
-                    </span>
-                    {item.actor_is_verified_artist ? <VerifiedArtistBadge /> : null}
-                  </span>
-                ) : null}
+              <div className="notification-card__body">
+                <div className="notification-card__row">
+                  <strong className="notification-card__title">{item.title}</strong>
+                  <span className="notification-card__timestamp">{formatDate(item.created_at)}</span>
+                  {!item.is_read ? <span aria-hidden="true" className="notification-card__dot" /> : null}
+                </div>
+                <p className="notification-card__message">{item.body}</p>
               </div>
             </button>
           ))}

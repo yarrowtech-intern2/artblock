@@ -53,6 +53,10 @@ export const router = createBrowserRouter([
             lazy: lazyRoute(() => import("./views/DashboardPage"), "DashboardPage")
           },
           {
+            path: "/create",
+            lazy: lazyRoute(() => import("./views/CreatePage"), "CreatePage")
+          },
+          {
             path: "/messages",
             lazy: lazyRoute(() => import("./views/MessagesPage"), "MessagesPage")
           },

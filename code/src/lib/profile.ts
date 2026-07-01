@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "./supabase";
-import type { AppRole, Database, FeedPostType, PostSurface } from "./supabase.types";
+import type { AppRole, Database, FeedPostType, PostSurface, StoryMediaKind } from "./supabase.types";
 import type {
   DirectMessage,
   FeedComment,
@@ -8,11 +8,15 @@ import type {
   InteractionPermission,
   NotificationItem,
   PollOption,
+  ProfileConnectionItem,
   ProfileRelationshipState,
   PublicProfile,
   PublicCreatorProfile,
   ProfileVisibility,
   ShortPost,
+  StoryGroup,
+  StoryItem,
+  StoryViewReceipt,
   UserSettings
 } from "../types/auth";
 
@@ -159,6 +163,54 @@ const fetchProfileRoleMap = async (profileIds: string[]) => {
       .filter((row) => row.id && row.role)
       .map((row) => [row.id!, row.role!]))
   );
+};
+
+const mapProfileConnectionItem = (
+  row: Database["public"]["Views"]["public_member_profiles"]["Row"]
+): ProfileConnectionItem | null => {
+  if (!row.id || !row.full_name || !row.role) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    full_name: row.full_name,
+    role: row.role,
+    is_verified_artist: Boolean(row.is_verified_artist),
+    username: row.username,
+    avatar_url: row.avatar_url,
+    creator_slug: row.creator_slug,
+    headline: row.headline
+  };
+};
+
+const fetchProfileConnectionItemsByIds = async (profileIds: string[]) => {
+  const supabase = getSupabaseClient();
+  const uniqueProfileIds = Array.from(new Set(profileIds.filter(Boolean)));
+
+  if (!supabase) {
+    return { data: [] as ProfileConnectionItem[], error: "Supabase is not configured." };
+  }
+
+  if (uniqueProfileIds.length === 0) {
+    return { data: [] as ProfileConnectionItem[], error: null };
+  }
+
+  const { data, error } = await supabase
+    .from("public_member_profiles")
+    .select("id, full_name, role, is_verified_artist, username, avatar_url, creator_slug, headline")
+    .in("id", uniqueProfileIds);
+
+  if (error) {
+    return { data: [] as ProfileConnectionItem[], error: error.message };
+  }
+
+  return {
+    data: ((data ?? []) as Database["public"]["Views"]["public_member_profiles"]["Row"][])
+      .map(mapProfileConnectionItem)
+      .filter((item): item is ProfileConnectionItem => Boolean(item)),
+    error: null
+  };
 };
 
 export const updateProfile = async (
@@ -643,6 +695,123 @@ export const toggleCreatorSubscription = async (
   return { error: error?.message ?? null };
 };
 
+export const fetchProfileFollowers = async (targetId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: [] as ProfileConnectionItem[], error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase
+    .from("profile_follows")
+    .select("follower_id, created_at")
+    .eq("followed_id", targetId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { data: [] as ProfileConnectionItem[], error: error.message };
+  }
+
+  const relations = (data ?? []) as Pick<Database["public"]["Tables"]["profile_follows"]["Row"], "follower_id" | "created_at">[];
+  const orderedIds = relations.map((row) => row.follower_id);
+  const profilesResult = await fetchProfileConnectionItemsByIds(orderedIds);
+
+  if (profilesResult.error) {
+    return profilesResult;
+  }
+
+  const profileMap = new Map(profilesResult.data.map((item) => [item.id, item]));
+
+  return {
+    data: orderedIds.map((id) => profileMap.get(id)).filter((item): item is ProfileConnectionItem => Boolean(item)),
+    error: null
+  };
+};
+
+export const fetchProfileSubscribers = async (targetId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: [] as ProfileConnectionItem[], error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase
+    .from("creator_subscriptions")
+    .select("subscriber_id, created_at")
+    .eq("creator_id", targetId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { data: [] as ProfileConnectionItem[], error: error.message };
+  }
+
+  const relations =
+    (data ?? []) as Pick<Database["public"]["Tables"]["creator_subscriptions"]["Row"], "subscriber_id" | "created_at">[];
+  const orderedIds = relations.map((row) => row.subscriber_id);
+  const profilesResult = await fetchProfileConnectionItemsByIds(orderedIds);
+
+  if (profilesResult.error) {
+    return profilesResult;
+  }
+
+  const profileMap = new Map(profilesResult.data.map((item) => [item.id, item]));
+
+  return {
+    data: orderedIds.map((id) => profileMap.get(id)).filter((item): item is ProfileConnectionItem => Boolean(item)),
+    error: null
+  };
+};
+
+export const fetchStoryViewReceipts = async (storyId: string, authorId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: [] as StoryViewReceipt[], error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase
+    .from("story_views")
+    .select("viewer_id, viewed_at")
+    .eq("story_id", storyId)
+    .order("viewed_at", { ascending: false });
+
+  if (error) {
+    return {
+      data: [] as StoryViewReceipt[],
+      error: mapStoriesSchemaError(getSupabaseErrorText(error) || error.message || "Unable to load story viewers.")
+    };
+  }
+
+  const relations = ((data ?? []) as Pick<Database["public"]["Tables"]["story_views"]["Row"], "viewer_id" | "viewed_at">[])
+    .filter((row) => row.viewer_id !== authorId);
+  const orderedIds = relations.map((row) => row.viewer_id);
+  const profilesResult = await fetchProfileConnectionItemsByIds(orderedIds);
+
+  if (profilesResult.error) {
+    return { data: [] as StoryViewReceipt[], error: profilesResult.error };
+  }
+
+  const profileMap = new Map(profilesResult.data.map((item) => [item.id, item]));
+
+  return {
+    data: relations
+      .map((row) => {
+        const profile = profileMap.get(row.viewer_id);
+
+        if (!profile) {
+          return null;
+        }
+
+        return {
+          ...profile,
+          viewed_at: row.viewed_at
+        } satisfies StoryViewReceipt;
+      })
+      .filter((item): item is StoryViewReceipt => Boolean(item)),
+    error: null
+  };
+};
+
 export const openDirectThread = async (peerId: string) => {
   const supabase = getSupabaseClient();
 
@@ -946,7 +1115,12 @@ export const uploadAvatar = async (userId: string, file: File) =>
 export const uploadCoverImage = async (userId: string, file: File) =>
   uploadProfileImage(userId, file, "cover");
 
-export const uploadPostMedia = async (userId: string, file: File) => {
+const uploadBucketMedia = async (
+  userId: string,
+  file: File,
+  bucket: string,
+  prefix: string
+) => {
   const supabase = getSupabaseClient();
 
   if (!supabase) {
@@ -954,18 +1128,22 @@ export const uploadPostMedia = async (userId: string, file: File) => {
   }
 
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const path = `${userId}/post-${Date.now()}.${extension}`;
-  const { error } = await supabase.storage
-    .from("post-media")
-    .upload(path, file, { upsert: true });
+  const path = `${userId}/${prefix}-${Date.now()}.${extension}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
 
   if (error) {
     return { data: null, error: error.message };
   }
 
-  const { data } = supabase.storage.from("post-media").getPublicUrl(path);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return { data: { publicUrl: data.publicUrl, path }, error: null };
 };
+
+export const uploadPostMedia = async (userId: string, file: File) =>
+  uploadBucketMedia(userId, file, "post-media", "post");
+
+export const uploadStoryMedia = async (userId: string, file: File) =>
+  uploadBucketMedia(userId, file, "post-media", "story");
 
 type CreateFeedPostInput = {
   postType: FeedPostType;
@@ -986,6 +1164,20 @@ type CreateFeedPostInput = {
   pollOptions?: string[];
 };
 
+type CreateStoryInput = {
+  mediaKind: StoryMediaKind;
+  mediaUrl: string;
+  mediaStoragePath?: string | null;
+  thumbnailUrl?: string | null;
+  thumbnailStoragePath?: string | null;
+  body?: string | null;
+  mediaDurationSeconds?: number | null;
+  mediaWidth?: number | null;
+  mediaHeight?: number | null;
+  compressionStatus?: "original" | "compressed";
+  expiresAt?: string;
+};
+
 type SupabaseErrorLike = {
   code?: string | null;
   details?: string | null;
@@ -994,15 +1186,23 @@ type SupabaseErrorLike = {
 };
 
 const SHORTS_MIGRATION_FILE = "20260630_shorts_reels_and_tips.sql";
+const STORIES_MIGRATION_FILE = "20260701_stories.sql";
 
 const getSupabaseErrorText = (error: SupabaseErrorLike | null | undefined) =>
   [error?.message, error?.details, error?.hint, error?.code].filter(Boolean).join(" ");
 
+const getSchemaCacheIdentifiers = (errorText: string) =>
+  Array.from(errorText.toLowerCase().matchAll(/'([^']+)'/g), (match) =>
+    match[1].replace(/^public\./, "")
+  );
+
 const isMissingSchemaCacheColumn = (errorText: string, columnName: string) =>
-  errorText.includes(`'${columnName}'`) && errorText.toLowerCase().includes("schema cache");
+  errorText.toLowerCase().includes("schema cache") &&
+  getSchemaCacheIdentifiers(errorText).includes(columnName.toLowerCase());
 
 const isMissingSchemaCacheRelation = (errorText: string, relationName: string) =>
-  errorText.includes(`'${relationName}'`) && errorText.toLowerCase().includes("schema cache");
+  errorText.toLowerCase().includes("schema cache") &&
+  getSchemaCacheIdentifiers(errorText).includes(relationName.toLowerCase());
 
 const isShortsSchemaMissingError = (errorText: string) =>
   [
@@ -1018,9 +1218,26 @@ const isShortsSchemaMissingError = (errorText: string) =>
   ].some((columnName) => isMissingSchemaCacheColumn(errorText, columnName)) ||
   isMissingSchemaCacheRelation(errorText, "short_posts");
 
+const isStoriesSchemaMissingError = (errorText: string) =>
+  [
+    "stories",
+    "story_views",
+    "active_stories",
+    "media_kind",
+    "expires_at"
+  ].some((relationOrColumn) =>
+    isMissingSchemaCacheRelation(errorText, relationOrColumn) ||
+    isMissingSchemaCacheColumn(errorText, relationOrColumn)
+  );
+
 const mapShortsSchemaError = (errorText: string) =>
   isShortsSchemaMissingError(errorText)
     ? `Shorts/Reels is not enabled in Supabase yet. Apply the ${SHORTS_MIGRATION_FILE} migration and refresh the API schema cache.`
+    : errorText;
+
+const mapStoriesSchemaError = (errorText: string) =>
+  isStoriesSchemaMissingError(errorText)
+    ? `Stories is not enabled in Supabase yet. Apply the ${STORIES_MIGRATION_FILE} migration and refresh the API schema cache.`
     : errorText;
 
 const shouldRetryLegacyFeedInsert = (input: CreateFeedPostInput, errorText: string) =>
@@ -1118,6 +1335,66 @@ export const createFeedPost = async (userId: string, input: CreateFeedPostInput)
   }
 
   return { error: null };
+};
+
+export const createStory = async (userId: string, input: CreateStoryInput) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const payload: Database["public"]["Tables"]["stories"]["Insert"] = {
+    author_id: userId,
+    media_kind: input.mediaKind,
+    media_url: input.mediaUrl,
+    media_storage_path: input.mediaStoragePath ?? null,
+    thumbnail_url: input.thumbnailUrl ?? null,
+    thumbnail_storage_path: input.thumbnailStoragePath ?? null,
+    body: input.body ?? null,
+    media_duration_seconds: input.mediaDurationSeconds ?? null,
+    media_width: input.mediaWidth ?? null,
+    media_height: input.mediaHeight ?? null,
+    compression_status: input.compressionStatus ?? "original",
+    expires_at: input.expiresAt ?? undefined
+  };
+
+  const { error } = await (supabase.from("stories") as never as {
+    insert: (
+      values: Database["public"]["Tables"]["stories"]["Insert"]
+    ) => Promise<{ error: SupabaseErrorLike | null }>;
+  }).insert(payload);
+
+  return {
+    error: error ? mapStoriesSchemaError(getSupabaseErrorText(error) || "Unable to create story.") : null
+  };
+};
+
+export const markStoryViewed = async (storyId: string, viewerId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { error } = await (supabase.from("story_views") as never as {
+    upsert: (
+      values: Database["public"]["Tables"]["story_views"]["Insert"],
+      options: { onConflict: string }
+    ) => Promise<{ error: SupabaseErrorLike | null }>;
+  }).upsert(
+    {
+      story_id: storyId,
+      viewer_id: viewerId
+    },
+    {
+      onConflict: "story_id,viewer_id"
+    }
+  );
+
+  return {
+    error: error ? mapStoriesSchemaError(getSupabaseErrorText(error) || "Unable to mark story as viewed.") : null
+  };
 };
 
 export const togglePostLike = async (postId: string, userId: string, currentlyLiked: boolean) => {
@@ -1603,6 +1880,34 @@ export const fetchFeedPosts = async (
   };
 };
 
+export const fetchFeedPostById = async (viewerId: string, postId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null as FeedPost | null, error: "Supabase is not configured." };
+  }
+
+  const { data: postRows, error } = await supabase
+    .from("feed_posts")
+    .select("*")
+    .eq("id", postId)
+    .limit(1);
+
+  if (error) {
+    return { data: null as FeedPost | null, error: error.message };
+  }
+
+  const hydrated = await hydrateFeedPosts(
+    viewerId,
+    (postRows ?? []) as Database["public"]["Views"]["feed_posts"]["Row"][]
+  );
+
+  return {
+    data: hydrated.data[0] ?? null,
+    error: hydrated.error
+  };
+};
+
 export const fetchShortPosts = async (
   viewerId: string,
   options: FetchFeedPostsOptions = {}
@@ -1639,6 +1944,121 @@ export const fetchShortPosts = async (
     error: hydrated.error,
     hasMore: ((postsData ?? []) as Database["public"]["Views"]["short_posts"]["Row"][]).length > pageSize
   };
+};
+
+export const fetchActiveStories = async (viewerId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: [] as StoryGroup[], error: "Supabase is not configured." };
+  }
+
+  const { data: storiesData, error: storiesError } = await supabase
+    .from("active_stories")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (storiesError) {
+    return {
+      data: [] as StoryGroup[],
+      error: mapStoriesSchemaError(getSupabaseErrorText(storiesError) || storiesError.message)
+    };
+  }
+
+  const storyRows = ((storiesData ?? []) as Database["public"]["Views"]["active_stories"]["Row"][]).filter(
+    (row) =>
+      row.id &&
+      row.author_id &&
+      row.media_kind &&
+      row.media_url &&
+      row.expires_at &&
+      row.created_at &&
+      row.full_name
+  );
+
+  if (storyRows.length === 0) {
+    return { data: [] as StoryGroup[], error: null };
+  }
+
+  const storyIds = storyRows.map((row) => row.id!);
+  const roleMap = await fetchProfileRoleMap(storyRows.map((row) => row.author_id!));
+  const { data: viewedData, error: viewedError } = await supabase
+    .from("story_views")
+    .select("story_id")
+    .eq("viewer_id", viewerId)
+    .in("story_id", storyIds);
+
+  if (viewedError) {
+    return {
+      data: [] as StoryGroup[],
+      error: mapStoriesSchemaError(getSupabaseErrorText(viewedError) || viewedError.message)
+    };
+  }
+
+  const viewedSet = new Set(((viewedData ?? []) as { story_id: string }[]).map((row) => row.story_id));
+  const items = storyRows.map(
+    (row) =>
+      ({
+        id: row.id!,
+        author_id: row.author_id!,
+        media_kind: row.media_kind! as StoryMediaKind,
+        media_url: row.media_url!,
+        media_storage_path: row.media_storage_path ?? null,
+        thumbnail_url: row.thumbnail_url ?? null,
+        thumbnail_storage_path: row.thumbnail_storage_path ?? null,
+        body: row.body,
+        media_duration_seconds: row.media_duration_seconds ?? null,
+        media_width: row.media_width ?? null,
+        media_height: row.media_height ?? null,
+        compression_status: row.compression_status ?? "original",
+        expires_at: row.expires_at!,
+        created_at: row.created_at!,
+        full_name: row.full_name!,
+        author_role: roleMap.get(row.author_id!) ?? "visitor",
+        is_verified_artist: Boolean(row.is_verified_artist),
+        username: row.username,
+        avatar_url: row.avatar_url,
+        creator_slug: row.creator_slug,
+        headline: row.headline,
+        viewed_by_viewer: row.author_id === viewerId ? true : viewedSet.has(row.id!)
+      }) satisfies StoryItem
+  );
+
+  const groupsMap = new Map<string, StoryGroup>();
+
+  items.forEach((item) => {
+    const existing = groupsMap.get(item.author_id);
+
+    if (!existing) {
+      groupsMap.set(item.author_id, {
+        author_id: item.author_id,
+        full_name: item.full_name,
+        author_role: item.author_role,
+        is_verified_artist: item.is_verified_artist,
+        username: item.username,
+        avatar_url: item.avatar_url,
+        creator_slug: item.creator_slug,
+        headline: item.headline,
+        items: [item],
+        has_unviewed: !item.viewed_by_viewer,
+        latest_created_at: item.created_at
+      });
+      return;
+    }
+
+    existing.items.push(item);
+    existing.has_unviewed = existing.has_unviewed || !item.viewed_by_viewer;
+    if (new Date(item.created_at).getTime() > new Date(existing.latest_created_at).getTime()) {
+      existing.latest_created_at = item.created_at;
+    }
+  });
+
+  const groups = Array.from(groupsMap.values()).sort(
+    (left, right) =>
+      new Date(right.latest_created_at).getTime() - new Date(left.latest_created_at).getTime()
+  );
+
+  return { data: groups, error: null };
 };
 
 export const fetchProfilePosts = async (viewerId: string, authorId: string) => {

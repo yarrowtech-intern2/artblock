@@ -412,7 +412,7 @@ export const ShortCard = ({
       <div className="short-card__media-shell">
         {post.post_type === "video" ? (
           <video
-            className="short-card__media"
+            className="short-card__media short-card__media--video"
             loop
             muted
             playsInline

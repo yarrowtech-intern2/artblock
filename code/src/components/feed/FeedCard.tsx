@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { getIdentityNameClass } from "../../lib/identity";
 import { getPostContentText, getRichPostStyleVars } from "../../lib/postRichContent";
 import { Link } from "react-router-dom";
@@ -12,6 +12,9 @@ type FeedCardProps = {
   viewerId: string;
   onRefresh: () => Promise<void>;
   extraActions?: ReactNode;
+  autoFocusKey?: string | null;
+  autoOpenComments?: boolean;
+  onAutoFocusHandled?: () => void;
   canDelete?: boolean;
   isDeleting?: boolean;
   onDelete?: (post: FeedPost) => Promise<string | null>;
@@ -96,10 +99,15 @@ export const FeedCard = ({
   viewerId,
   onRefresh,
   extraActions,
+  autoFocusKey = null,
+  autoOpenComments = false,
+  onAutoFocusHandled,
   canDelete = false,
   isDeleting = false,
   onDelete
 }: FeedCardProps) => {
+  const articleRef = useRef<HTMLElement | null>(null);
+  const lastHandledFocusKeyRef = useRef<string | null>(null);
   const [isCommentsOpen, setCommentsOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
   const [isMutating, setMutating] = useState(false);
@@ -121,6 +129,25 @@ export const FeedCard = ({
       ? "Only followers can comment on this post."
       : "Comments are turned off for this post.";
   const showDeleteAction = canDelete && Boolean(onDelete);
+
+  useEffect(() => {
+    if (!autoFocusKey || autoFocusKey === lastHandledFocusKeyRef.current) {
+      return;
+    }
+
+    lastHandledFocusKeyRef.current = autoFocusKey;
+
+    if (autoOpenComments) {
+      setCommentsOpen(true);
+    }
+
+    articleRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
+    onAutoFocusHandled?.();
+  }, [autoFocusKey, autoOpenComments, onAutoFocusHandled]);
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -197,7 +224,10 @@ export const FeedCard = ({
   };
 
   return (
-    <article className="feed-card">
+    <article
+      className={`feed-card${autoFocusKey ? " feed-card--highlighted" : ""}`}
+      ref={articleRef}
+    >
       {/* Header: avatar + author info */}
       <header className="feed-card__header">
         <Link className="feed-card__identity feed-card__identity--link" to={`/profiles/${post.author_id}`}>

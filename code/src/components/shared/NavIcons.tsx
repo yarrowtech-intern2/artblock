@@ -68,4 +68,3 @@ export const LightbulbNavIcon = (props: IconProps) => (
     <line x1="10" y1="20" x2="14" y2="20" />
   </svg>
 );
-

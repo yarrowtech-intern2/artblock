@@ -94,8 +94,8 @@ export const CreatorStudio = ({
       <div className="editor-panel__header">
         <div>
           <span className="section-heading__eyebrow">Creator Presence</span>
-          <h2>Control your public creator page</h2>
-          <p>Create a clean public page before expanding into posts, media, and community features.</p>
+          <h2>Creator page</h2>
+          <p>Edit the public page slug, intro, and publish state.</p>
         </div>
         {formState.is_published ? (
           <Link className="ghost-button" to={publicPath}>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   fetchUnreadMessageCount,
   fetchUnreadNotificationsCount
@@ -12,11 +12,14 @@ import {
 } from "../shared/NavIcons";
 import { getSupabaseClient } from "../../lib/supabase";
 import { useAuth } from "../../providers/AuthProvider";
+import { CreateOptionsMenu } from "../create/CreateOptionsMenu";
 
 export const BottomNav = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [isCreateMenuOpen, setCreateMenuOpen] = useState(false);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -53,6 +56,10 @@ export const BottomNav = () => {
 
     return () => { void supabase.removeChannel(channel); };
   }, [user?.id]);
+
+  useEffect(() => {
+    setCreateMenuOpen(false);
+  }, [location.pathname, location.search]);
 
   const navItem = (
     to: string,
@@ -93,18 +100,27 @@ export const BottomNav = () => {
           <ReelsNavIcon aria-hidden="true" className="bottom-nav__icon-image" />
         )}
 
-        <NavLink
-          to={{ pathname: "/shorts", search: "?compose=1" }}
-          className="bottom-nav__create"
-          aria-label="Upload reel"
-        >
-          <span className="bottom-nav__create-btn">
+        <div className="bottom-nav__create">
+          {isCreateMenuOpen ? (
+            <CreateOptionsMenu
+              className="bottom-nav__create-menu"
+              compact
+              onSelect={() => setCreateMenuOpen(false)}
+            />
+          ) : null}
+          <button
+            aria-expanded={isCreateMenuOpen}
+            aria-label="Open create menu"
+            className="bottom-nav__create-btn"
+            onClick={() => setCreateMenuOpen((current) => !current)}
+            type="button"
+          >
             <svg aria-hidden="true" fill="none" height="26" viewBox="0 0 24 24" width="26">
               <line stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" x1="12" x2="12" y1="5" y2="19" />
               <line stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" x1="5" x2="19" y1="12" y2="12" />
             </svg>
-          </span>
-        </NavLink>
+          </button>
+        </div>
 
         {navItem(
           "/messages",

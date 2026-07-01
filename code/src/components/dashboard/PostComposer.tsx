@@ -26,6 +26,10 @@ type PostComposerProps = {
   userId: string;
   onPublished: () => Promise<void>;
   variant?: "dashboard" | "feed";
+  initialPostType?: FeedPostType;
+  showHeader?: boolean;
+  showTypeSelector?: boolean;
+  className?: string;
 };
 
 const emptyPollOptions = ["", ""];
@@ -41,9 +45,13 @@ const textAlignOptions: PostTextAlign[] = ["left", "center", "right"];
 export const PostComposer = ({
   userId,
   onPublished,
-  variant = "dashboard"
+  variant = "dashboard",
+  initialPostType = "image",
+  showHeader = true,
+  showTypeSelector = true,
+  className
 }: PostComposerProps) => {
-  const [postType, setPostType] = useState<FeedPostType>("image");
+  const [postType, setPostType] = useState<FeedPostType>(initialPostType);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [pollOptions, setPollOptions] = useState<string[]>(emptyPollOptions);
@@ -55,9 +63,12 @@ export const PostComposer = ({
   const [isExpanded, setExpanded] = useState(variant === "dashboard");
   const [richStyle, setRichStyle] = useState<RichPostStyle>(defaultRichPostStyle);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const libraryInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const mediaAccept =
     postType === "video" ? "video/mp4,video/webm,video/quicktime" : "image/png,image/jpeg,image/webp";
+  const cameraAccept = postType === "video" ? "video/*" : "image/*";
 
   useEffect(() => {
     return () => {
@@ -66,6 +77,10 @@ export const PostComposer = ({
       }
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    setPostType(initialPostType);
+  }, [initialPostType]);
 
   const resetComposer = () => {
     setTitle("");
@@ -141,6 +156,7 @@ export const PostComposer = ({
     setError(null);
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
+    event.target.value = "";
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -226,22 +242,24 @@ export const PostComposer = ({
   const richPreviewStyle = getRichPostStyleVars(richStyle, postType === "text") as CSSProperties;
 
   return (
-    <section className={`editor-panel ${variant === "feed" ? "editor-panel--feed" : ""}`}>
-      <div className="editor-panel__header">
-        <div>
-          <span className="section-heading__eyebrow">Posting</span>
-          <h2>{variant === "feed" ? "New post" : "Create post"}</h2>
+    <section className={`editor-panel ${variant === "feed" ? "editor-panel--feed" : ""} ${className ?? ""}`.trim()}>
+      {showHeader ? (
+        <div className="editor-panel__header">
+          <div>
+            <span className="section-heading__eyebrow">Posting</span>
+            <h2>{variant === "feed" ? "New post" : "Feed composer"}</h2>
+          </div>
+          {variant === "feed" ? (
+            <button
+              className="solid-button"
+              onClick={() => setExpanded((current) => !current)}
+              type="button"
+            >
+              {isExpanded ? "Close" : "Start Post"}
+            </button>
+          ) : null}
         </div>
-        {variant === "feed" ? (
-          <button
-            className="solid-button"
-            onClick={() => setExpanded((current) => !current)}
-            type="button"
-          >
-            {isExpanded ? "Close" : "Start Post"}
-          </button>
-        ) : null}
-      </div>
+      ) : null}
 
       {variant === "feed" && !isExpanded ? (
         <div className="feed-composer-trigger">
@@ -275,24 +293,26 @@ export const PostComposer = ({
         {error ? <div className="auth-message auth-message--error">{error}</div> : null}
         {message ? <div className="auth-message auth-message--info">{message}</div> : null}
 
-        <div className="composer-type-grid">
-          {postOptions.map((option) => (
-            <button
-              className={`composer-type ${postType === option.value ? "composer-type--active" : ""}`}
-              key={option.value}
-              onClick={() => {
-                setPostType(option.value);
-                setError(null);
-                setMessage(null);
-                setSelectedFile(null);
-                setPreviewUrl(null);
-              }}
-              type="button"
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        {showTypeSelector ? (
+          <div className="composer-type-grid">
+            {postOptions.map((option) => (
+              <button
+                className={`composer-type ${postType === option.value ? "composer-type--active" : ""}`}
+                key={option.value}
+                onClick={() => {
+                  setPostType(option.value);
+                  setError(null);
+                  setMessage(null);
+                  setSelectedFile(null);
+                  setPreviewUrl(null);
+                }}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         {postType === "poll" ? (
           <label className="dashboard-form__full">
@@ -322,21 +342,83 @@ export const PostComposer = ({
           <label className="dashboard-form__full">
             {postType === "video" ? "Video" : "Image"}
             <div className="media-uploader">
-              {previewUrl ? (
-                postType === "video" ? (
-                  <video className="media-uploader__preview" controls src={previewUrl} />
-                ) : (
-                  <img alt="Selected post preview" className="media-uploader__preview" src={previewUrl} />
-                )
-              ) : (
-                <div className="media-uploader__empty">
-                  Select a {postType === "video" ? "video" : "image"} to publish
+              <div className="upload-panel">
+                <div className="upload-panel__header">
+                  <div>
+                    <span className="upload-panel__eyebrow">{postType === "video" ? "Video Post" : "Image Post"}</span>
+                    <strong>{selectedFile ? selectedFile.name : `Choose a ${postType} to publish`}</strong>
+                    <p>
+                      {postType === "video"
+                        ? "Portrait, square, and landscape videos are supported."
+                        : "Upload from gallery or camera."}
+                    </p>
+                  </div>
+                  {selectedFile ? (
+                    <button
+                      className="ghost-button"
+                      onClick={() => {
+                        setSelectedFile(null);
+                        setPreviewUrl(null);
+                        setError(null);
+                      }}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
                 </div>
-              )}
-              <label className="ghost-button avatar-panel__action">
-                Choose {postType === "video" ? "Video" : "Image"}
-                <input accept={mediaAccept} onChange={handleFileChange} type="file" />
-              </label>
+
+                {previewUrl ? (
+                  <div className={`upload-panel__preview-frame upload-panel__preview-frame--${postType}`}>
+                    {postType === "video" ? (
+                      <video className="media-uploader__preview" controls src={previewUrl} />
+                    ) : (
+                      <img alt="Selected post preview" className="media-uploader__preview" src={previewUrl} />
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    className="upload-panel__dropzone"
+                    onClick={() => libraryInputRef.current?.click()}
+                    type="button"
+                  >
+                    <span aria-hidden="true" className="upload-panel__dropzone-icon">
+                      +
+                    </span>
+                    <strong>Select from gallery</strong>
+                    <span>{postType === "video" ? "MP4, WebM, MOV" : "PNG, JPG, WEBP"}</span>
+                  </button>
+                )}
+
+                <div className="upload-panel__actions">
+                  <button
+                    className="solid-button"
+                    disabled={isSubmitting}
+                    onClick={() => libraryInputRef.current?.click()}
+                    type="button"
+                  >
+                    {selectedFile ? "Replace from gallery" : "From Gallery"}
+                  </button>
+                  <button
+                    className="ghost-button"
+                    disabled={isSubmitting}
+                    onClick={() => cameraInputRef.current?.click()}
+                    type="button"
+                  >
+                    Camera Upload
+                  </button>
+                </div>
+
+                <input accept={mediaAccept} hidden onChange={handleFileChange} ref={libraryInputRef} type="file" />
+                <input
+                  accept={cameraAccept}
+                  capture={postType === "video" ? "environment" : "user"}
+                  hidden
+                  onChange={handleFileChange}
+                  ref={cameraInputRef}
+                  type="file"
+                />
+              </div>
             </div>
           </label>
         ) : null}

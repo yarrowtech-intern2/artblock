@@ -49,6 +49,14 @@ export const router = createBrowserRouter([
             lazy: lazyRoute(() => import("./views/FeedPage"), "FeedPage")
           },
           {
+            path: "/profiles/:id/posts/:postId",
+            lazy: lazyRoute(() => import("./views/ProfilePostsPage"), "ProfilePostsPage")
+          },
+          {
+            path: "/creators/:slug/posts/:postId",
+            lazy: lazyRoute(() => import("./views/ProfilePostsPage"), "ProfilePostsPage")
+          },
+          {
             path: "/dashboard",
             lazy: lazyRoute(() => import("./views/DashboardPage"), "DashboardPage")
           },

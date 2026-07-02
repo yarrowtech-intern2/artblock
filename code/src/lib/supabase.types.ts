@@ -7,6 +7,8 @@ export type Json =
   | Json[];
 
 export type AppRole = "visitor" | "creator" | "admin";
+export type CommunityMemberRole = "admin" | "moderator" | "member";
+export type CommunityMembershipStatus = "invited" | "active" | "rejected";
 export type FeedPostType = "image" | "video" | "poll" | "text";
 export type PostSurface = "feed" | "short";
 export type StoryMediaKind = "image" | "video";
@@ -16,7 +18,9 @@ export type NotificationType =
   | "new_subscriber"
   | "new_message"
   | "post_like"
-  | "post_comment";
+  | "post_comment"
+  | "community_invite"
+  | "community_joined";
 
 export type Database = {
   public: {
@@ -119,6 +123,126 @@ export type Database = {
           thread_id?: string;
           sender_id?: string;
           body?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      artist_communities: {
+        Row: {
+          id: string;
+          creator_id: string;
+          name: string;
+          description: string | null;
+          fan_interactions_enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          creator_id: string;
+          name: string;
+          description?: string | null;
+          fan_interactions_enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          creator_id?: string;
+          name?: string;
+          description?: string | null;
+          fan_interactions_enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      community_memberships: {
+        Row: {
+          community_id: string;
+          user_id: string;
+          role: CommunityMemberRole;
+          status: CommunityMembershipStatus;
+          invited_by: string | null;
+          joined_at: string | null;
+          last_read_at: string;
+          last_message_at: string;
+          unread_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          community_id: string;
+          user_id: string;
+          role?: CommunityMemberRole;
+          status?: CommunityMembershipStatus;
+          invited_by?: string | null;
+          joined_at?: string | null;
+          last_read_at?: string;
+          last_message_at?: string;
+          unread_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          community_id?: string;
+          user_id?: string;
+          role?: CommunityMemberRole;
+          status?: CommunityMembershipStatus;
+          invited_by?: string | null;
+          joined_at?: string | null;
+          last_read_at?: string;
+          last_message_at?: string;
+          unread_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      community_messages: {
+        Row: {
+          id: string;
+          community_id: string;
+          sender_id: string;
+          body: string;
+          parent_message_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          community_id: string;
+          sender_id: string;
+          body: string;
+          parent_message_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          community_id?: string;
+          sender_id?: string;
+          body?: string;
+          parent_message_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      community_message_reactions: {
+        Row: {
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        };
+        Insert: {
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at?: string;
+        };
+        Update: {
+          message_id?: string;
+          user_id?: string;
+          emoji?: string;
           created_at?: string;
         };
         Relationships: [];
@@ -1005,6 +1129,84 @@ export type Database = {
           avatar_url: string | null;
         };
       };
+      community_access_profiles: {
+        Row: {
+          community_id: string | null;
+          creator_id: string | null;
+          name: string | null;
+          description: string | null;
+          fan_interactions_enabled: boolean | null;
+          viewer_role: CommunityMemberRole | null;
+          viewer_status: CommunityMembershipStatus | null;
+          can_send_messages: boolean | null;
+          can_join: boolean | null;
+          member_count: number | null;
+        };
+      };
+      community_previews: {
+        Row: {
+          community_id: string | null;
+          creator_id: string | null;
+          name: string | null;
+          description: string | null;
+          fan_interactions_enabled: boolean | null;
+          viewer_role: CommunityMemberRole | null;
+          viewer_status: CommunityMembershipStatus | null;
+          unread_count: number | null;
+          joined_at: string | null;
+          last_read_at: string | null;
+          last_message_at: string | null;
+          creator_full_name: string | null;
+          creator_is_verified_artist: boolean | null;
+          creator_username: string | null;
+          creator_avatar_url: string | null;
+          creator_role: AppRole | null;
+          last_message_id: string | null;
+          last_message_body: string | null;
+          last_message_created_at: string | null;
+          last_message_sender_id: string | null;
+          last_message_sender_full_name: string | null;
+          last_message_sender_username: string | null;
+          can_send_messages: boolean | null;
+          member_count: number | null;
+        };
+      };
+      community_member_directory: {
+        Row: {
+          community_id: string | null;
+          user_id: string | null;
+          role: CommunityMemberRole | null;
+          status: CommunityMembershipStatus | null;
+          joined_at: string | null;
+          created_at: string | null;
+          full_name: string | null;
+          profile_role: AppRole | null;
+          is_verified_artist: boolean | null;
+          username: string | null;
+          avatar_url: string | null;
+          creator_slug: string | null;
+          headline: string | null;
+        };
+      };
+      community_message_entries: {
+        Row: {
+          id: string | null;
+          community_id: string | null;
+          sender_id: string | null;
+          body: string | null;
+          parent_message_id: string | null;
+          created_at: string | null;
+          full_name: string | null;
+          sender_role: AppRole | null;
+          is_verified_artist: boolean | null;
+          username: string | null;
+          avatar_url: string | null;
+          parent_body: string | null;
+          parent_sender_full_name: string | null;
+          parent_sender_username: string | null;
+          reaction_summary: Json | null;
+        };
+      };
       notification_items: {
         Row: {
           id: string | null;
@@ -1039,6 +1241,69 @@ export type Database = {
         };
         Returns: string;
       };
+      create_artist_community: {
+        Args: {
+          community_name: string;
+          community_description?: string | null;
+        };
+        Returns: string;
+      };
+      update_artist_community: {
+        Args: {
+          target_community_id: string;
+          community_name: string;
+          community_description?: string | null;
+          enable_fan_interactions?: boolean;
+        };
+        Returns: undefined;
+      };
+      invite_community_members: {
+        Args: {
+          target_community_id: string;
+          member_ids: string[];
+        };
+        Returns: number;
+      };
+      join_artist_community: {
+        Args: {
+          target_community_id: string;
+        };
+        Returns: string;
+      };
+      respond_to_community_invite: {
+        Args: {
+          target_community_id: string;
+          accept_invite: boolean;
+        };
+        Returns: CommunityMembershipStatus;
+      };
+      set_community_member_role: {
+        Args: {
+          target_community_id: string;
+          target_user_id: string;
+          target_role: CommunityMemberRole;
+        };
+        Returns: undefined;
+      };
+      remove_community_member: {
+        Args: {
+          target_community_id: string;
+          target_user_id: string;
+        };
+        Returns: undefined;
+      };
+      leave_artist_community: {
+        Args: {
+          target_community_id: string;
+        };
+        Returns: undefined;
+      };
+      mark_community_read: {
+        Args: {
+          target_community_id: string;
+        };
+        Returns: undefined;
+      };
       mark_thread_read: {
         Args: {
           target_thread_id: string;
@@ -1058,6 +1323,8 @@ export type Database = {
     };
     Enums: {
       app_role: AppRole;
+      community_member_role: CommunityMemberRole;
+      community_membership_status: CommunityMembershipStatus;
       feed_post_type: FeedPostType;
       notification_type: NotificationType;
     };

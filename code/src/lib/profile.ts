@@ -1,6 +1,11 @@
 import { getSupabaseClient } from "./supabase";
 import type { AppRole, Database, FeedPostType, PostSurface, StoryMediaKind } from "./supabase.types";
 import type {
+  CommunityMember,
+  CommunityMessage,
+  CommunityPreview,
+  CommunityReactionSummary,
+  CreatorCommunity,
   DirectMessage,
   FeedComment,
   FeedPost,
@@ -180,8 +185,42 @@ const mapProfileConnectionItem = (
     username: row.username,
     avatar_url: row.avatar_url,
     creator_slug: row.creator_slug,
-    headline: row.headline
+    headline: row.headline,
+    message_permissions:
+      (row.message_permissions ?? DEFAULT_INTERACTION_PERMISSION) as InteractionPermission,
+    viewer_can_message: Boolean(row.viewer_can_message)
   };
+};
+
+const parseCommunityReactionSummary = (value: Database["public"]["Views"]["community_message_entries"]["Row"]["reaction_summary"]) => {
+  if (!Array.isArray(value)) {
+    return [] as CommunityReactionSummary[];
+  }
+
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return null;
+      }
+
+      const emoji = typeof entry.emoji === "string" ? entry.emoji : null;
+      const count = typeof entry.count === "number" ? entry.count : Number(entry.count ?? 0);
+      const reactedByViewer =
+        typeof entry.reacted_by_viewer === "boolean"
+          ? entry.reacted_by_viewer
+          : Boolean(entry.reacted_by_viewer);
+
+      if (!emoji) {
+        return null;
+      }
+
+      return {
+        emoji,
+        count,
+        reacted_by_viewer: reactedByViewer
+      } satisfies CommunityReactionSummary;
+    })
+    .filter((entry): entry is CommunityReactionSummary => Boolean(entry));
 };
 
 const fetchProfileConnectionItemsByIds = async (profileIds: string[]) => {
@@ -198,7 +237,9 @@ const fetchProfileConnectionItemsByIds = async (profileIds: string[]) => {
 
   const { data, error } = await supabase
     .from("public_member_profiles")
-    .select("id, full_name, role, is_verified_artist, username, avatar_url, creator_slug, headline")
+    .select(
+      "id, full_name, role, is_verified_artist, username, avatar_url, creator_slug, headline, message_permissions, viewer_can_message"
+    )
     .in("id", uniqueProfileIds);
 
   if (error) {
@@ -762,6 +803,59 @@ export const fetchProfileSubscribers = async (targetId: string) => {
   };
 };
 
+export const fetchProfilePals = async (targetId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: [] as ProfileConnectionItem[], error: "Supabase is not configured." };
+  }
+
+  const [followingResult, followerResult] = await Promise.all([
+    supabase
+      .from("profile_follows")
+      .select("followed_id, created_at")
+      .eq("follower_id", targetId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("profile_follows")
+      .select("follower_id")
+      .eq("followed_id", targetId)
+  ]);
+
+  if (followingResult.error || followerResult.error) {
+    return {
+      data: [] as ProfileConnectionItem[],
+      error: followingResult.error?.message ?? followerResult.error?.message ?? "Unable to load pals."
+    };
+  }
+
+  const followerIds = new Set(
+    ((followerResult.data ?? []) as Pick<Database["public"]["Tables"]["profile_follows"]["Row"], "follower_id">[])
+      .map((row) => row.follower_id)
+      .filter(Boolean)
+  );
+  const orderedIds = (
+    (followingResult.data ?? []) as Pick<
+      Database["public"]["Tables"]["profile_follows"]["Row"],
+      "followed_id" | "created_at"
+    >[]
+  )
+    .map((row) => row.followed_id)
+    .filter((id): id is string => Boolean(id) && followerIds.has(id));
+  const profilesResult = await fetchProfileConnectionItemsByIds(orderedIds);
+
+  if (profilesResult.error) {
+    return profilesResult;
+  }
+
+  const profileMap = new Map(profilesResult.data.map((item) => [item.id, item]));
+
+  return {
+    data: orderedIds.map((id) => profileMap.get(id)).filter((item): item is ProfileConnectionItem => Boolean(item)),
+    error: null
+  };
+};
+
 export const fetchStoryViewReceipts = async (storyId: string, authorId: string) => {
   const supabase = getSupabaseClient();
 
@@ -871,6 +965,207 @@ export const fetchInboxThreads = async () => {
   };
 };
 
+export const fetchCreatorCommunityAccess = async (creatorId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null as CreatorCommunity | null, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase
+    .from("community_access_profiles")
+    .select("*")
+    .eq("creator_id", creatorId)
+    .maybeSingle();
+
+  const row = data as Database["public"]["Views"]["community_access_profiles"]["Row"] | null;
+
+  if (!row || !row.community_id || !row.creator_id || !row.name) {
+    return { data: null as CreatorCommunity | null, error: error?.message ?? null };
+  }
+
+  return {
+    data: {
+      community_id: row.community_id,
+      creator_id: row.creator_id,
+      name: row.name,
+      description: row.description,
+      fan_interactions_enabled: Boolean(row.fan_interactions_enabled),
+      viewer_role: row.viewer_role,
+      viewer_status: row.viewer_status,
+      can_send_messages: Boolean(row.can_send_messages),
+      can_join: Boolean(row.can_join),
+      member_count: Number(row.member_count ?? 0)
+    } satisfies CreatorCommunity,
+    error: error?.message ?? null
+  };
+};
+
+export const fetchCommunityPreviews = async () => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: [] as CommunityPreview[], error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase
+    .from("community_previews")
+    .select("*")
+    .order("last_message_created_at", { ascending: false, nullsFirst: false });
+
+  if (error) {
+    return { data: [] as CommunityPreview[], error: error.message };
+  }
+
+  return {
+    data: ((data ?? []) as Database["public"]["Views"]["community_previews"]["Row"][])
+      .filter(
+        (row) =>
+          row.community_id &&
+          row.creator_id &&
+          row.name &&
+          row.viewer_role &&
+          row.viewer_status &&
+          row.creator_full_name &&
+          row.creator_role
+      )
+      .map(
+        (row) =>
+          ({
+            community_id: row.community_id!,
+            creator_id: row.creator_id!,
+            name: row.name!,
+            description: row.description,
+            fan_interactions_enabled: Boolean(row.fan_interactions_enabled),
+            viewer_role: row.viewer_role!,
+            viewer_status: row.viewer_status!,
+            unread_count: Number(row.unread_count ?? 0),
+            joined_at: row.joined_at,
+            last_read_at: row.last_read_at,
+            last_message_at: row.last_message_at,
+            creator_full_name: row.creator_full_name!,
+            creator_is_verified_artist: Boolean(row.creator_is_verified_artist),
+            creator_username: row.creator_username,
+            creator_avatar_url: row.creator_avatar_url,
+            creator_role: row.creator_role!,
+            last_message_id: row.last_message_id,
+            last_message_body: row.last_message_body,
+            last_message_created_at: row.last_message_created_at,
+            last_message_sender_id: row.last_message_sender_id,
+            last_message_sender_full_name: row.last_message_sender_full_name,
+            last_message_sender_username: row.last_message_sender_username,
+            can_send_messages: Boolean(row.can_send_messages),
+            member_count: Number(row.member_count ?? 0)
+          }) satisfies CommunityPreview
+      ),
+    error: null
+  };
+};
+
+export const fetchCommunityMembers = async (communityId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: [] as CommunityMember[], error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase
+    .from("community_member_directory")
+    .select("*")
+    .eq("community_id", communityId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return { data: [] as CommunityMember[], error: error.message };
+  }
+
+  return {
+    data: ((data ?? []) as Database["public"]["Views"]["community_member_directory"]["Row"][])
+      .filter(
+        (row) =>
+          row.community_id &&
+          row.user_id &&
+          row.role &&
+          row.status &&
+          row.created_at &&
+          row.full_name &&
+          row.profile_role
+      )
+      .map(
+        (row) =>
+          ({
+            community_id: row.community_id!,
+            user_id: row.user_id!,
+            role: row.role!,
+            status: row.status!,
+            joined_at: row.joined_at,
+            created_at: row.created_at!,
+            full_name: row.full_name!,
+            profile_role: row.profile_role!,
+            is_verified_artist: Boolean(row.is_verified_artist),
+            username: row.username,
+            avatar_url: row.avatar_url,
+            creator_slug: row.creator_slug,
+            headline: row.headline
+          }) satisfies CommunityMember
+      ),
+    error: null
+  };
+};
+
+export const fetchCommunityMessages = async (communityId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: [] as CommunityMessage[], error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await supabase
+    .from("community_message_entries")
+    .select("*")
+    .eq("community_id", communityId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return { data: [] as CommunityMessage[], error: error.message };
+  }
+
+  return {
+    data: ((data ?? []) as Database["public"]["Views"]["community_message_entries"]["Row"][])
+      .filter(
+        (row) =>
+          row.id &&
+          row.community_id &&
+          row.sender_id &&
+          row.body &&
+          row.created_at &&
+          row.full_name &&
+          row.sender_role
+      )
+      .map(
+        (row) =>
+          ({
+            id: row.id!,
+            community_id: row.community_id!,
+            sender_id: row.sender_id!,
+            body: row.body!,
+            parent_message_id: row.parent_message_id,
+            created_at: row.created_at!,
+            full_name: row.full_name!,
+            sender_role: row.sender_role!,
+            is_verified_artist: Boolean(row.is_verified_artist),
+            username: row.username,
+            avatar_url: row.avatar_url,
+            parent_body: row.parent_body,
+            parent_sender_full_name: row.parent_sender_full_name,
+            parent_sender_username: row.parent_sender_username,
+            reactions: parseCommunityReactionSummary(row.reaction_summary)
+          }) satisfies CommunityMessage
+      ),
+    error: null
+  };
+};
+
 export const fetchUnreadMessageCount = async (userId: string) => {
   const supabase = getSupabaseClient();
 
@@ -878,20 +1173,34 @@ export const fetchUnreadMessageCount = async (userId: string) => {
     return { data: 0, error: "Supabase is not configured." };
   }
 
-  const { data, error } = await supabase
+  const directMessagesResponse = await supabase
     .from("direct_thread_members")
     .select("unread_count")
     .eq("user_id", userId);
 
-  if (error) {
-    return { data: 0, error: error.message };
+  const communityMessagesResponse = await supabase
+    .from("community_memberships")
+    .select("unread_count")
+    .eq("user_id", userId)
+    .eq("status", "active");
+
+  if (directMessagesResponse.error || communityMessagesResponse.error) {
+    return {
+      data: 0,
+      error: directMessagesResponse.error?.message ?? communityMessagesResponse.error?.message ?? null
+    };
   }
 
   return {
-    data: ((data ?? []) as { unread_count: number }[]).reduce(
-      (sum, row) => sum + Number(row.unread_count ?? 0),
-      0
-    ),
+    data:
+      ((directMessagesResponse.data ?? []) as { unread_count: number }[]).reduce(
+        (sum, row) => sum + Number(row.unread_count ?? 0),
+        0
+      ) +
+      ((communityMessagesResponse.data ?? []) as { unread_count: number }[]).reduce(
+        (sum, row) => sum + Number(row.unread_count ?? 0),
+        0
+      ),
     error: null
   };
 };
@@ -1033,6 +1342,254 @@ export const sendDirectMessage = async (threadId: string, senderId: string, body
     thread_id: threadId,
     sender_id: senderId,
     body
+  });
+
+  return { error: error?.message ?? null };
+};
+
+export const createArtistCommunity = async (communityName: string, communityDescription?: string | null) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null as string | null, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await (supabase.rpc as never as (
+    fn: "create_artist_community",
+    args: Database["public"]["Functions"]["create_artist_community"]["Args"]
+  ) => Promise<{ data: string | null; error: { message: string } | null }>)("create_artist_community", {
+    community_name: communityName,
+    community_description: communityDescription ?? null
+  });
+
+  return {
+    data: typeof data === "string" ? data : null,
+    error: error?.message ?? null
+  };
+};
+
+export const updateArtistCommunity = async (input: {
+  communityId: string;
+  communityName: string;
+  communityDescription?: string | null;
+  enableFanInteractions: boolean;
+}) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { error } = await (supabase.rpc as never as (
+    fn: "update_artist_community",
+    args: Database["public"]["Functions"]["update_artist_community"]["Args"]
+  ) => Promise<{ data: null; error: { message: string } | null }>)("update_artist_community", {
+    target_community_id: input.communityId,
+    community_name: input.communityName,
+    community_description: input.communityDescription ?? null,
+    enable_fan_interactions: input.enableFanInteractions
+  });
+
+  return { error: error?.message ?? null };
+};
+
+export const inviteCommunityMembers = async (communityId: string, memberIds: string[]) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: 0, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await (supabase.rpc as never as (
+    fn: "invite_community_members",
+    args: Database["public"]["Functions"]["invite_community_members"]["Args"]
+  ) => Promise<{ data: number | null; error: { message: string } | null }>)("invite_community_members", {
+    target_community_id: communityId,
+    member_ids: memberIds
+  });
+
+  return {
+    data: Number(data ?? 0),
+    error: error?.message ?? null
+  };
+};
+
+export const joinArtistCommunity = async (communityId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null as string | null, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await (supabase.rpc as never as (
+    fn: "join_artist_community",
+    args: Database["public"]["Functions"]["join_artist_community"]["Args"]
+  ) => Promise<{ data: string | null; error: { message: string } | null }>)("join_artist_community", {
+    target_community_id: communityId
+  });
+
+  return {
+    data: typeof data === "string" ? data : null,
+    error: error?.message ?? null
+  };
+};
+
+export const respondToCommunityInvite = async (communityId: string, acceptInvite: boolean) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await (supabase.rpc as never as (
+    fn: "respond_to_community_invite",
+    args: Database["public"]["Functions"]["respond_to_community_invite"]["Args"]
+  ) => Promise<{
+    data: Database["public"]["Functions"]["respond_to_community_invite"]["Returns"] | null;
+    error: { message: string } | null;
+  }>)("respond_to_community_invite", {
+    target_community_id: communityId,
+    accept_invite: acceptInvite
+  });
+
+  return {
+    data: data ?? null,
+    error: error?.message ?? null
+  };
+};
+
+export const setCommunityMemberRole = async (
+  communityId: string,
+  userId: string,
+  role: Database["public"]["Enums"]["community_member_role"]
+) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { error } = await (supabase.rpc as never as (
+    fn: "set_community_member_role",
+    args: Database["public"]["Functions"]["set_community_member_role"]["Args"]
+  ) => Promise<{ data: null; error: { message: string } | null }>)("set_community_member_role", {
+    target_community_id: communityId,
+    target_user_id: userId,
+    target_role: role
+  });
+
+  return { error: error?.message ?? null };
+};
+
+export const removeCommunityMember = async (communityId: string, userId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { error } = await (supabase.rpc as never as (
+    fn: "remove_community_member",
+    args: Database["public"]["Functions"]["remove_community_member"]["Args"]
+  ) => Promise<{ data: null; error: { message: string } | null }>)("remove_community_member", {
+    target_community_id: communityId,
+    target_user_id: userId
+  });
+
+  return { error: error?.message ?? null };
+};
+
+export const leaveArtistCommunity = async (communityId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { error } = await (supabase.rpc as never as (
+    fn: "leave_artist_community",
+    args: Database["public"]["Functions"]["leave_artist_community"]["Args"]
+  ) => Promise<{ data: null; error: { message: string } | null }>)("leave_artist_community", {
+    target_community_id: communityId
+  });
+
+  return { error: error?.message ?? null };
+};
+
+export const markCommunityRead = async (communityId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { error } = await (supabase.rpc as never as (
+    fn: "mark_community_read",
+    args: Database["public"]["Functions"]["mark_community_read"]["Args"]
+  ) => Promise<{ data: null; error: { message: string } | null }>)("mark_community_read", {
+    target_community_id: communityId
+  });
+
+  return { error: error?.message ?? null };
+};
+
+export const sendCommunityMessage = async (input: {
+  communityId: string;
+  senderId: string;
+  body: string;
+  parentMessageId?: string | null;
+}) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const { error } = await (supabase.from("community_messages") as never as {
+    insert: (
+      values: Database["public"]["Tables"]["community_messages"]["Insert"]
+    ) => Promise<{ error: { message: string } | null }>;
+  }).insert({
+    community_id: input.communityId,
+    sender_id: input.senderId,
+    body: input.body,
+    parent_message_id: input.parentMessageId ?? null
+  });
+
+  return { error: error?.message ?? null };
+};
+
+export const toggleCommunityMessageReaction = async (input: {
+  messageId: string;
+  userId: string;
+  emoji: string;
+  currentlyReacted: boolean;
+}) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured." };
+  }
+
+  if (input.currentlyReacted) {
+    const { error } = await supabase
+      .from("community_message_reactions")
+      .delete()
+      .eq("message_id", input.messageId)
+      .eq("user_id", input.userId)
+      .eq("emoji", input.emoji);
+
+    return { error: error?.message ?? null };
+  }
+
+  const { error } = await (supabase.from("community_message_reactions") as never as {
+    insert: (
+      values: Database["public"]["Tables"]["community_message_reactions"]["Insert"]
+    ) => Promise<{ error: { message: string } | null }>;
+  }).insert({
+    message_id: input.messageId,
+    user_id: input.userId,
+    emoji: input.emoji
   });
 
   return { error: error?.message ?? null };
@@ -1943,6 +2500,34 @@ export const fetchShortPosts = async (
     data: hydrated.data as ShortPost[],
     error: hydrated.error,
     hasMore: ((postsData ?? []) as Database["public"]["Views"]["short_posts"]["Row"][]).length > pageSize
+  };
+};
+
+export const fetchShortPostById = async (viewerId: string, postId: string) => {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return { data: null as ShortPost | null, error: "Supabase is not configured." };
+  }
+
+  const { data: postRows, error } = await supabase
+    .from("short_posts")
+    .select("*")
+    .eq("id", postId)
+    .limit(1);
+
+  if (error) {
+    return { data: null as ShortPost | null, error: mapShortsSchemaError(getSupabaseErrorText(error)) };
+  }
+
+  const hydrated = await hydrateFeedPosts(
+    viewerId,
+    (postRows ?? []) as Database["public"]["Views"]["short_posts"]["Row"][]
+  );
+
+  return {
+    data: (hydrated.data[0] as ShortPost | undefined) ?? null,
+    error: hydrated.error
   };
 };
 

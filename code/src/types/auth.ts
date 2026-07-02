@@ -1,7 +1,10 @@
 import type { Session, User } from "@supabase/supabase-js";
 import type {
   AppRole,
+  CommunityMemberRole,
+  CommunityMembershipStatus,
   FeedPostType,
+  Json,
   NotificationType,
   PostSurface,
   ProfileGender,
@@ -59,6 +62,25 @@ export type PublicCreatorProfile = {
 export type ProfileVisibility = "public" | "members" | "private";
 export type InteractionPermission = "everyone" | "followers" | "nobody";
 
+export type CommunityReactionSummary = {
+  emoji: string;
+  count: number;
+  reacted_by_viewer: boolean;
+};
+
+export type CreatorCommunity = {
+  community_id: string;
+  creator_id: string;
+  name: string;
+  description: string | null;
+  fan_interactions_enabled: boolean;
+  viewer_role: CommunityMemberRole | null;
+  viewer_status: CommunityMembershipStatus | null;
+  can_send_messages: boolean;
+  can_join: boolean;
+  member_count: number;
+};
+
 export type UserSettings = {
   profile_id: string;
   keep_me_signed_in: boolean;
@@ -115,6 +137,8 @@ export type ProfileConnectionItem = {
   avatar_url: string | null;
   creator_slug: string | null;
   headline: string | null;
+  message_permissions?: InteractionPermission;
+  viewer_can_message?: boolean;
 };
 
 export type FeedComment = {
@@ -249,6 +273,49 @@ export type InboxThread = {
   message_count: number;
 };
 
+export type CommunityPreview = {
+  community_id: string;
+  creator_id: string;
+  name: string;
+  description: string | null;
+  fan_interactions_enabled: boolean;
+  viewer_role: CommunityMemberRole;
+  viewer_status: CommunityMembershipStatus;
+  unread_count: number;
+  joined_at: string | null;
+  last_read_at: string | null;
+  last_message_at: string | null;
+  creator_full_name: string;
+  creator_is_verified_artist: boolean;
+  creator_username: string | null;
+  creator_avatar_url: string | null;
+  creator_role: AppRole;
+  last_message_id: string | null;
+  last_message_body: string | null;
+  last_message_created_at: string | null;
+  last_message_sender_id: string | null;
+  last_message_sender_full_name: string | null;
+  last_message_sender_username: string | null;
+  can_send_messages: boolean;
+  member_count: number;
+};
+
+export type CommunityMember = {
+  community_id: string;
+  user_id: string;
+  role: CommunityMemberRole;
+  status: CommunityMembershipStatus;
+  joined_at: string | null;
+  created_at: string;
+  full_name: string;
+  profile_role: AppRole;
+  is_verified_artist: boolean;
+  username: string | null;
+  avatar_url: string | null;
+  creator_slug: string | null;
+  headline: string | null;
+};
+
 export type DirectMessage = {
   id: string;
   thread_id: string;
@@ -260,6 +327,25 @@ export type DirectMessage = {
   is_verified_artist: boolean;
   username: string | null;
   avatar_url: string | null;
+};
+
+export type CommunityMessage = {
+  id: string;
+  community_id: string;
+  sender_id: string;
+  body: string;
+  parent_message_id: string | null;
+  created_at: string;
+  full_name: string;
+  sender_role: AppRole;
+  is_verified_artist: boolean;
+  username: string | null;
+  avatar_url: string | null;
+  parent_body: string | null;
+  parent_sender_full_name: string | null;
+  parent_sender_username: string | null;
+  reactions: CommunityReactionSummary[];
+  reaction_summary?: Json;
 };
 
 export type NotificationItem = {

@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CampaignCard } from "../components/feed/CampaignCard";
 import { FeedCard } from "../components/feed/FeedCard";
@@ -278,6 +278,64 @@ export const FeedPage = () => {
     void loadStories();
   }, [user?.id]);
 
+  const handleStoryClose = useCallback(() => {
+    setActiveStoryAuthorId(null);
+  }, []);
+
+  const handleStoryViewed = useCallback(
+    (storyId: string) => {
+      if (!user?.id) {
+        return;
+      }
+
+      let shouldMarkViewed = false;
+
+      setStories((current) => {
+        let didChange = false;
+
+        const nextGroups = current.map((group) => {
+          let groupChanged = false;
+
+          const nextItems = group.items.map((item) => {
+            if (item.id !== storyId) {
+              return item;
+            }
+
+            if (item.author_id !== user.id) {
+              shouldMarkViewed = true;
+            }
+
+            if (item.viewed_by_viewer) {
+              return item;
+            }
+
+            groupChanged = true;
+            return { ...item, viewed_by_viewer: true };
+          });
+
+          if (!groupChanged) {
+            return group;
+          }
+
+          didChange = true;
+
+          return {
+            ...group,
+            items: nextItems,
+            has_unviewed: nextItems.some((item) => !item.viewed_by_viewer)
+          };
+        });
+
+        return didChange ? nextGroups : current;
+      });
+
+      if (shouldMarkViewed) {
+        void markStoryViewed(storyId, user.id);
+      }
+    },
+    [user?.id]
+  );
+
   useEffect(() => {
     const node = sentinelRef.current;
     if (!node || !hasMore || isLoading || isLoadingMore) return;
@@ -523,33 +581,8 @@ export const FeedPage = () => {
 
       <StoryViewer
         groups={stories}
-        onClose={() => setActiveStoryAuthorId(null)}
-        onViewed={(storyId) => {
-          if (!user) {
-            return;
-          }
-
-          setStories((current) =>
-            current.map((group) => {
-              const nextItems = group.items.map((item) =>
-                item.id === storyId ? { ...item, viewed_by_viewer: true } : item
-              );
-
-              return {
-                ...group,
-                items: nextItems,
-                has_unviewed: nextItems.some((item) => !item.viewed_by_viewer)
-              };
-            })
-          );
-
-          const activeStoryAuthorId =
-            stories.find((group) => group.items.some((item) => item.id === storyId))?.author_id ?? null;
-
-          if (activeStoryAuthorId && activeStoryAuthorId !== user.id) {
-            void markStoryViewed(storyId, user.id);
-          }
-        }}
+        onClose={handleStoryClose}
+        onViewed={handleStoryViewed}
         startingAuthorId={activeStoryAuthorId}
         viewerId={user?.id ?? null}
       />

@@ -1,22 +1,85 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ShortCard } from "../components/shorts/ShortCard";
 import {
   addComment,
   createArtistTipOrder,
+  fetchCommunityPreviews,
+  fetchProfileFollowers,
+  fetchProfilePals,
+  fetchProfileSubscribers,
+  fetchShortPostById,
   fetchShortPosts,
+  openDirectThread,
+  recordPostShare,
+  sendCommunityMessage,
+  sendDirectMessage,
   verifyArtistTipPayment
 } from "../lib/profile";
 import { loadRazorpayCheckout } from "../lib/razorpay";
 import { useAuth } from "../providers/AuthProvider";
-import type { ShortPost } from "../types/auth";
+import type { ProfileConnectionItem, ShortPost } from "../types/auth";
 
 const SHORTS_PAGE_SIZE = 4;
 const TIP_PRESETS = [100, 250, 500, 1000];
+const SHARE_PREVIEW_PREFIX = "Shared a reel on ArtBlock";
+
+type ShareRecipientCategory = "communities" | "pals" | "followers" | "subs";
+
+type ShareRecipient = {
+  id: string;
+  recipientId: string;
+  recipientType: "profile" | "community";
+  full_name: string;
+  role: string;
+  username: string | null;
+  avatar_url: string | null;
+  creator_slug: string | null;
+  headline: string | null;
+  viewer_can_message?: boolean;
+  categories: ShareRecipientCategory[];
+  primaryCategory: ShareRecipientCategory;
+};
+
+const SHARE_CATEGORY_LABELS: Record<ShareRecipientCategory, string> = {
+  communities: "Communities",
+  pals: "Pals",
+  followers: "Followers",
+  subs: "Subscribers"
+};
+
+const buildReelPermalink = (postId: string) =>
+  typeof window === "undefined" ? `/shorts?reel=${postId}` : `${window.location.origin}/shorts?reel=${postId}`;
+
+const buildReelShareMessage = (post: ShortPost) => {
+  const previewTitle =
+    post.title?.trim() ||
+    post.body?.trim() ||
+    post.headline?.trim() ||
+    `${post.full_name} shared a reel`;
+
+  return `${SHARE_PREVIEW_PREFIX}\n${previewTitle}\n${buildReelPermalink(post.id)}`;
+};
+
+const matchesRecipientSearch = (recipient: ShareRecipient, query: string) => {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return [recipient.full_name, recipient.username, recipient.headline]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .includes(normalizedQuery);
+};
 
 export const ShortsPage = () => {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const targetReelId = searchParams.get("reel");
   const [posts, setPosts] = useState<ShortPost[]>([]);
   const [isLoading, setLoading] = useState(true);
   const [isLoadingMore, setLoadingMore] = useState(false);
@@ -28,6 +91,14 @@ export const ShortsPage = () => {
   const [commentDraft, setCommentDraft] = useState("");
   const [isSubmittingComment, setSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [sharePostId, setSharePostId] = useState<string | null>(null);
+  const [shareRecipients, setShareRecipients] = useState<ShareRecipient[]>([]);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
+  const [shareSearch, setShareSearch] = useState("");
+  const [isLoadingShareRecipients, setLoadingShareRecipients] = useState(false);
+  const [isSendingShare, setSendingShare] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [tipPostId, setTipPostId] = useState<string | null>(null);
   const [tipAmount, setTipAmount] = useState("100");
   const [tipMessage, setTipMessage] = useState("");
@@ -41,9 +112,25 @@ export const ShortsPage = () => {
     () => posts.find((post) => post.id === commentPostId) ?? null,
     [commentPostId, posts]
   );
+  const sharePost = useMemo(
+    () => posts.find((post) => post.id === sharePostId) ?? null,
+    [posts, sharePostId]
+  );
   const tipPost = useMemo(
     () => posts.find((post) => post.id === tipPostId) ?? null,
     [posts, tipPostId]
+  );
+  const filteredShareRecipients = useMemo(
+    () => shareRecipients.filter((recipient) => matchesRecipientSearch(recipient, shareSearch)),
+    [shareRecipients, shareSearch]
+  );
+  const shareRecipientSections = useMemo(
+    () =>
+      (["communities", "pals", "followers", "subs"] as ShareRecipientCategory[]).map((category) => ({
+        category,
+        items: filteredShareRecipients.filter((recipient) => recipient.primaryCategory === category)
+      })),
+    [filteredShareRecipients]
   );
 
   const loadShorts = async ({
@@ -99,6 +186,54 @@ export const ShortsPage = () => {
     setPage(0);
     void loadShorts({ page: 0, append: false });
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !targetReelId || posts.some((post) => post.id === targetReelId)) {
+      return;
+    }
+
+    void fetchShortPostById(user.id, targetReelId).then((result) => {
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      if (!result.data) {
+        return;
+      }
+
+      setPosts((current) => {
+        if (current.some((post) => post.id === result.data!.id)) {
+          return current;
+        }
+
+        return [result.data!, ...current];
+      });
+    });
+  }, [posts, targetReelId, user?.id]);
+
+  useEffect(() => {
+    if (!targetReelId || !posts.some((post) => post.id === targetReelId)) {
+      return;
+    }
+
+    setActivePostId(targetReelId);
+
+    const frame = window.requestAnimationFrame(() => {
+      itemNodesRef.current[targetReelId]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [posts, targetReelId]);
+
+  useEffect(() => {
+    if (!infoMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setInfoMessage(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [infoMessage]);
 
   useEffect(() => {
     const root = feedRef.current;
@@ -157,6 +292,269 @@ export const ShortsPage = () => {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [hasMore, isLoading, isLoadingMore, page, user?.id]);
+
+  const updateShareCount = (postId: string, incrementBy = 1) => {
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              share_count: post.share_count + incrementBy
+            }
+          : post
+      )
+    );
+  };
+
+  const loadShareRecipients = async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    setLoadingShareRecipients(true);
+    setShareError(null);
+
+    const [communitiesResult, palsResult, followersResult, subscribersResult] = await Promise.all([
+      fetchCommunityPreviews(),
+      fetchProfilePals(user.id),
+      fetchProfileFollowers(user.id),
+      fetchProfileSubscribers(user.id)
+    ]);
+
+    setLoadingShareRecipients(false);
+
+    const firstError =
+      communitiesResult.error ?? palsResult.error ?? followersResult.error ?? subscribersResult.error ?? null;
+
+    if (firstError) {
+      setShareError(firstError);
+      return;
+    }
+
+    const recipientMap = new Map<string, ShareRecipient>();
+
+    const upsertRecipient = (item: ProfileConnectionItem, category: ShareRecipientCategory) => {
+      if (item.id === user.id) {
+        return;
+      }
+
+      const recipientKey = `profile:${item.id}`;
+      const existing = recipientMap.get(recipientKey);
+
+      if (existing) {
+        if (!existing.categories.includes(category)) {
+          existing.categories.push(category);
+        }
+        return;
+      }
+
+      recipientMap.set(recipientKey, {
+        id: recipientKey,
+        recipientId: item.id,
+        recipientType: "profile",
+        full_name: item.full_name,
+        role: item.role,
+        username: item.username,
+        avatar_url: item.avatar_url,
+        creator_slug: item.creator_slug,
+        headline: item.headline,
+        viewer_can_message: item.viewer_can_message,
+        categories: [category],
+        primaryCategory: category
+      });
+    };
+
+    communitiesResult.data
+      .filter((community) => community.viewer_status === "active" && community.can_send_messages)
+      .forEach((community) => {
+        const recipientKey = `community:${community.community_id}`;
+        recipientMap.set(recipientKey, {
+          id: recipientKey,
+          recipientId: community.community_id,
+          recipientType: "community",
+          full_name: community.name,
+          role: "community",
+          username: null,
+          avatar_url: community.creator_avatar_url,
+          creator_slug: null,
+          headline: community.description,
+          categories: ["communities"],
+          primaryCategory: "communities"
+        });
+      });
+
+    palsResult.data.forEach((item) => upsertRecipient(item, "pals"));
+    followersResult.data.forEach((item) => upsertRecipient(item, "followers"));
+    subscribersResult.data.forEach((item) => upsertRecipient(item, "subs"));
+
+    const nextRecipients = Array.from(recipientMap.values()).sort((left, right) => {
+      if (left.primaryCategory !== right.primaryCategory) {
+        const categoryOrder: ShareRecipientCategory[] = ["communities", "pals", "followers", "subs"];
+        return categoryOrder.indexOf(left.primaryCategory) - categoryOrder.indexOf(right.primaryCategory);
+      }
+
+      return left.full_name.localeCompare(right.full_name);
+    });
+
+    setShareRecipients(nextRecipients);
+  };
+
+  const handleOpenShare = async (targetPost: ShortPost) => {
+    if (!user?.id) {
+      navigate("/login");
+      return;
+    }
+
+    setSharePostId(targetPost.id);
+    setSelectedRecipientIds([]);
+    setShareSearch("");
+    setShareError(null);
+
+    await loadShareRecipients();
+  };
+
+  const toggleShareRecipient = (recipientId: string) => {
+    setSelectedRecipientIds((current) =>
+      current.includes(recipientId) ? current.filter((id) => id !== recipientId) : [...current, recipientId]
+    );
+  };
+
+  const handleNativeShare = async () => {
+    if (!sharePost || !user?.id || typeof window === "undefined") {
+      return;
+    }
+
+    const permalink = buildReelPermalink(sharePost.id);
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: sharePost.title ?? `${sharePost.full_name} on ArtBlock`,
+          text: sharePost.body ?? "Watch this reel on ArtBlock.",
+          url: permalink
+        });
+        await recordPostShare(sharePost.id, user.id, "native-share");
+        updateShareCount(sharePost.id);
+        setInfoMessage("Reel shared.");
+        setSharePostId(null);
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(permalink);
+        await recordPostShare(sharePost.id, user.id, "copy-link");
+        updateShareCount(sharePost.id);
+        setInfoMessage("Reel link copied.");
+        setSharePostId(null);
+        return;
+      }
+
+      throw new Error("Sharing is not supported on this device.");
+    } catch (shareFailure) {
+      if (shareFailure instanceof DOMException && shareFailure.name === "AbortError") {
+        return;
+      }
+
+      setShareError(shareFailure instanceof Error ? shareFailure.message : "Unable to share this reel right now.");
+    }
+  };
+
+  const handleCopyReelLink = async () => {
+    if (!sharePost || !user?.id || !navigator.clipboard?.writeText) {
+      setShareError("Copy link is not available on this device.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildReelPermalink(sharePost.id));
+      await recordPostShare(sharePost.id, user.id, "copy-link");
+      updateShareCount(sharePost.id);
+      setInfoMessage("Reel link copied.");
+      setSharePostId(null);
+    } catch (copyFailure) {
+      setShareError(copyFailure instanceof Error ? copyFailure.message : "Unable to copy the reel link.");
+    }
+  };
+
+  const handleSendShare = async () => {
+    if (!sharePost || !user?.id) {
+      return;
+    }
+
+    if (selectedRecipientIds.length === 0) {
+      setShareError("Choose at least one recipient.");
+      return;
+    }
+
+    setSendingShare(true);
+    setShareError(null);
+
+    const recipients = shareRecipients.filter((recipient) => selectedRecipientIds.includes(recipient.id));
+    const messageBody = buildReelShareMessage(sharePost);
+    let successCount = 0;
+    let failureCount = 0;
+
+    await Promise.all(
+      recipients.map(async (recipient) => {
+        if (recipient.recipientType === "community") {
+          const communityResult = await sendCommunityMessage({
+            communityId: recipient.recipientId,
+            senderId: user.id,
+            body: messageBody
+          });
+
+          if (communityResult.error) {
+            failureCount += 1;
+            return;
+          }
+
+          successCount += 1;
+          return;
+        }
+
+        const threadResult = await openDirectThread(recipient.recipientId);
+
+        if (threadResult.error || !threadResult.data) {
+          failureCount += 1;
+          return;
+        }
+
+        const sendResult = await sendDirectMessage(threadResult.data, user.id, messageBody);
+
+        if (sendResult.error) {
+          failureCount += 1;
+          return;
+        }
+
+        successCount += 1;
+      })
+    );
+
+    setSendingShare(false);
+
+    if (successCount > 0) {
+      await Promise.all(
+        Array.from({ length: successCount }, () => recordPostShare(sharePost.id, user.id, "system"))
+      );
+      updateShareCount(sharePost.id, successCount);
+    }
+
+    if (successCount > 0 && failureCount === 0) {
+      setInfoMessage(`Reel sent to ${successCount} ${successCount === 1 ? "destination" : "destinations"}.`);
+      setSharePostId(null);
+      return;
+    }
+
+    if (successCount > 0) {
+      setInfoMessage(`Reel sent to ${successCount} ${successCount === 1 ? "destination" : "destinations"}.`);
+    }
+
+    setShareError(
+      successCount === 0
+        ? "Unable to send this reel right now."
+        : `${failureCount} ${failureCount === 1 ? "delivery failed" : "deliveries failed"}.`
+    );
+  };
 
   const handleCommentSubmit = async (event: { preventDefault(): void }) => {
     event.preventDefault();
@@ -276,6 +674,7 @@ export const ShortsPage = () => {
   return (
     <section className="shorts-page shorts-page--immersive">
       {error ? <div className="shorts-page__error auth-message auth-message--error">{error}</div> : null}
+      {infoMessage ? <div className="shorts-page__info auth-message auth-message--info">{infoMessage}</div> : null}
 
       <div className="shorts-feed" ref={feedRef}>
         {isLoading ? (
@@ -320,6 +719,9 @@ export const ShortsPage = () => {
                 setCommentError(null);
                 setCommentPostId(targetPost.id);
               }}
+              onOpenShare={(targetPost) => {
+                void handleOpenShare(targetPost);
+              }}
               onOpenTip={(targetPost) => {
                 setTipError(null);
                 setTipPostId(targetPost.id);
@@ -340,6 +742,102 @@ export const ShortsPage = () => {
           </div>
         ) : null}
       </div>
+
+      {sharePost ? (
+        <div className="shorts-sheet" role="dialog" aria-modal="true" aria-labelledby="shorts-share-title">
+          <div className="shorts-sheet__backdrop" onClick={() => setSharePostId(null)} />
+          <section className="shorts-sheet__panel shorts-sheet__panel--share">
+            <div className="shorts-sheet__header">
+              <div>
+                <span className="section-heading__eyebrow">Share Reel</span>
+                <h2 id="shorts-share-title">{sharePost.title ?? sharePost.full_name}</h2>
+              </div>
+              <button className="ghost-button" onClick={() => setSharePostId(null)} type="button">
+                Close
+              </button>
+            </div>
+
+            {shareError ? <div className="auth-message auth-message--error">{shareError}</div> : null}
+
+            <div className="shorts-share">
+              <div className="shorts-share__preview">
+                <strong>{sharePost.full_name}</strong>
+                <p>{sharePost.body?.trim() || sharePost.title?.trim() || "Shared reel preview"}</p>
+              </div>
+
+              <div className="shorts-share__search">
+                <input
+                  onChange={(event) => setShareSearch(event.target.value)}
+                  placeholder="Search communities, pals, followers, or subscribers"
+                  type="search"
+                  value={shareSearch}
+                />
+              </div>
+
+              {isLoadingShareRecipients ? (
+                <p className="shorts-share__empty">Loading recipients...</p>
+              ) : shareRecipients.length === 0 ? (
+                <p className="shorts-share__empty">No eligible recipients yet. Use the options below to share outside chat.</p>
+              ) : (
+                <div className="shorts-share__sections">
+                  {shareRecipientSections.map((section) =>
+                    section.items.length > 0 ? (
+                      <section className="shorts-share__section" key={section.category}>
+                        <h3>{SHARE_CATEGORY_LABELS[section.category]}</h3>
+                        <div className="shorts-share__list">
+                          {section.items.map((recipient) => {
+                            const isSelected = selectedRecipientIds.includes(recipient.id);
+
+                            return (
+                              <button
+                                aria-pressed={isSelected}
+                                className={`shorts-share__recipient${isSelected ? " shorts-share__recipient--selected" : ""}`}
+                                key={recipient.id}
+                                onClick={() => toggleShareRecipient(recipient.id)}
+                                type="button"
+                              >
+                                <div className="shorts-share__recipient-main">
+                                  <strong>{recipient.username ? `@${recipient.username}` : recipient.full_name}</strong>
+                                  <span>{recipient.headline ?? recipient.full_name}</span>
+                                </div>
+                                <div className="shorts-share__recipient-meta">
+                                  <span className="shorts-share__recipient-tags">
+                                    {recipient.categories.map((category) => SHARE_CATEGORY_LABELS[category]).join(" · ")}
+                                  </span>
+                                  {recipient.viewer_can_message === false ? (
+                                    <span className="shorts-share__recipient-note">May not accept DMs</span>
+                                  ) : null}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    ) : null
+                  )}
+                </div>
+              )}
+
+              <div className="shorts-share__actions">
+                <button
+                  className="solid-button"
+                  disabled={isSendingShare || selectedRecipientIds.length === 0}
+                  onClick={() => void handleSendShare()}
+                  type="button"
+                >
+                  {isSendingShare ? "Sending..." : `Send in ArtBlock${selectedRecipientIds.length > 0 ? ` (${selectedRecipientIds.length})` : ""}`}
+                </button>
+                <button className="ghost-button" onClick={() => void handleNativeShare()} type="button">
+                  Share to apps
+                </button>
+                <button className="ghost-button" onClick={() => void handleCopyReelLink()} type="button">
+                  Copy link
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {commentPost ? (
         <div className="shorts-sheet" role="dialog" aria-modal="true" aria-labelledby="shorts-comments-title">

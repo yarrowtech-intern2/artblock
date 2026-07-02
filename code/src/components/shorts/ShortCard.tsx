@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { Link } from "react-router-dom";
 import {
   fetchProfileRelationshipState,
-  recordPostShare,
   toggleFollowProfile,
   togglePostLike
 } from "../../lib/profile";
@@ -16,6 +15,7 @@ type ShortCardProps = {
   isActive: boolean;
   onBack: () => void;
   onOpenComments: (post: ShortPost) => void;
+  onOpenShare: (post: ShortPost) => void;
   onOpenTip: (post: ShortPost) => void;
 };
 
@@ -195,16 +195,32 @@ const buildToneStyles = (tones: ToneMap) =>
         : "linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.42) 100%)"
   } as CSSProperties);
 
+const formatActionCount = (value: number) => {
+  if (value >= 1_000_000) {
+    const millions = value / 1_000_000;
+    return `${millions >= 10 ? Math.round(millions) : millions.toFixed(1).replace(/\.0$/, "")}M`;
+  }
+
+  if (value >= 1_000) {
+    const thousands = value / 1_000;
+    return `${thousands >= 10 ? Math.round(thousands) : thousands.toFixed(1).replace(/\.0$/, "")}K`;
+  }
+
+  return String(value);
+};
+
 const ActionButton = ({
   label,
   onClick,
   children,
+  count,
   disabled = false,
   active = false
 }: {
   label: string;
   onClick: () => void;
   children: ReactNode;
+  count?: number;
   disabled?: boolean;
   active?: boolean;
 }) => (
@@ -215,6 +231,7 @@ const ActionButton = ({
     type="button"
   >
     <span className="short-card__action-icon">{children}</span>
+    {typeof count === "number" ? <span className="short-card__action-count">{formatActionCount(count)}</span> : null}
     <span className="short-card__action-label">{label}</span>
   </button>
 );
@@ -225,14 +242,13 @@ export const ShortCard = ({
   isActive,
   onBack,
   onOpenComments,
+  onOpenShare,
   onOpenTip
 }: ShortCardProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [localLiked, setLocalLiked] = useState(post.liked_by_viewer);
   const [localLikeCount, setLocalLikeCount] = useState(post.like_count);
-  const [localShareCount, setLocalShareCount] = useState(post.share_count);
   const [isLiking, setLiking] = useState(false);
-  const [isSharing, setSharing] = useState(false);
   const [relationshipLoading, setRelationshipLoading] = useState(false);
   const [isFollowing, setFollowing] = useState(false);
   const [tones, setTones] = useState<ToneMap>(DEFAULT_TONES);
@@ -271,8 +287,7 @@ export const ShortCard = ({
   useEffect(() => {
     setLocalLiked(post.liked_by_viewer);
     setLocalLikeCount(post.like_count);
-    setLocalShareCount(post.share_count);
-  }, [post.id, post.liked_by_viewer, post.like_count, post.share_count]);
+  }, [post.id, post.liked_by_viewer, post.like_count]);
 
   useEffect(() => {
     let cancelled = false;
@@ -352,43 +367,6 @@ export const ShortCard = ({
     }
   };
 
-  const handleShare = async () => {
-    if (isSharing) {
-      return;
-    }
-
-    setSharing(true);
-    setError(null);
-
-    const permalink = `${window.location.origin}/shorts?reel=${post.id}`;
-    let platform: "native-share" | "copy-link" = "copy-link";
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: post.title ?? `${post.full_name} on ArtBlock`,
-          text: post.body ?? "Watch this reel on ArtBlock.",
-          url: permalink
-        });
-        platform = "native-share";
-      } else if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(permalink);
-      }
-
-      setLocalShareCount((current) => current + 1);
-      await recordPostShare(post.id, viewerId, platform);
-    } catch (shareError) {
-      if (shareError instanceof DOMException && shareError.name === "AbortError") {
-        setSharing(false);
-        return;
-      }
-
-      setError("Unable to share this reel right now.");
-    }
-
-    setSharing(false);
-  };
-
   const handleFollow = async () => {
     if (!supportsFollow || relationshipLoading) {
       return;
@@ -453,6 +431,7 @@ export const ShortCard = ({
         <div className="short-card__rail">
           <ActionButton
             active={localLiked}
+            count={localLikeCount}
             disabled={isLiking}
             label="Like"
             onClick={() => void handleLike()}
@@ -460,11 +439,11 @@ export const ShortCard = ({
             <HeartIcon filled={localLiked} />
           </ActionButton>
 
-          <ActionButton label="Comment" onClick={() => onOpenComments(post)}>
+          <ActionButton count={post.comment_count} label="Comment" onClick={() => onOpenComments(post)}>
             <CommentIcon />
           </ActionButton>
 
-          <ActionButton disabled={isSharing} label="Share" onClick={() => void handleShare()}>
+          <ActionButton count={post.share_count} label="Share" onClick={() => onOpenShare(post)}>
             <ShareIcon />
           </ActionButton>
 
@@ -512,7 +491,7 @@ export const ShortCard = ({
       {error ? <div className="short-card__error auth-message auth-message--error">{error}</div> : null}
       <span className="short-card__metrics" aria-hidden="true">
         {localLikeCount > 0 ? `${localLikeCount} likes` : ""}
-        {localShareCount > 0 ? `${localLikeCount > 0 ? " · " : ""}${localShareCount} shares` : ""}
+        {post.share_count > 0 ? `${localLikeCount > 0 ? " · " : ""}${post.share_count} shares` : ""}
       </span>
     </article>
   );

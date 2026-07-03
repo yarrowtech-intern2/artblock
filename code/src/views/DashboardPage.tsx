@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation } from "react-router-dom";
 import { CreatorStudio } from "../components/dashboard/CreatorStudio";
 import { PostComposer } from "../components/dashboard/PostComposer";
 import { ProfileEditor } from "../components/dashboard/ProfileEditor";
+import { TipDashboardSection } from "../components/dashboard/TipDashboardSection";
 import { getIdentityNameClass } from "../lib/identity";
 import {
   createArtistCommunity,
@@ -360,6 +361,8 @@ export const DashboardPage = () => {
       <div className="dashboard-workspace">
         <div className="dashboard-workspace__main">
           <ProfileEditor profile={profile} userId={user.id} onProfileSaved={refreshProfile} />
+
+          <TipDashboardSection profile={profile} userId={user.id} />
 
           {profile.role === "creator" ? (
             <>

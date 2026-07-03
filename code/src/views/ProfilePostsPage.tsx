@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FeedCard } from "../components/feed/FeedCard";
+import { ArtistTipSheet, type ArtistTipTarget } from "../components/tips/ArtistTipSheet";
 import { deletePost, fetchProfilePosts, fetchPublicProfileById, fetchPublicProfileBySlug } from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
 import type { FeedPost, PublicProfile } from "../types/auth";
@@ -28,13 +29,27 @@ const ProfilePostsSkeleton = () => (
 export const ProfilePostsPage = () => {
   const { id, slug, postId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profile, user } = useAuth();
   const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [focusPostId, setFocusPostId] = useState<string | null>(postId ?? null);
+  const [tipTarget, setTipTarget] = useState<ArtistTipTarget | null>(null);
+  const [tippedPostIds, setTippedPostIds] = useState<Set<string>>(new Set());
+
+  const TipGlyph = () => (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path
+        d="M12 3v18m4-13.5c0-1.933-1.79-3.5-4-3.5S8 5.567 8 7.5 9.79 11 12 11s4 1.567 4 3.5S14.21 18 12 18s-4-1.567-4-3.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.75"
+      />
+    </svg>
+  );
 
   const loadPosts = async (targetProfileId: string) => {
     if (!user?.id) {
@@ -49,6 +64,16 @@ export const ProfilePostsPage = () => {
   useEffect(() => {
     setFocusPostId(postId ?? null);
   }, [postId]);
+
+  useEffect(() => {
+    setTippedPostIds(
+      new Set(
+        posts
+          .filter((post) => post.tipped_by_viewer)
+          .map((post) => post.id)
+      )
+    );
+  }, [posts]);
 
   useEffect(() => {
     const loadPage = async () => {
@@ -159,6 +184,37 @@ export const ProfilePostsPage = () => {
                 canDelete={post.author_id === user?.id}
                 isDeleting={deletingPostId === post.id}
                 key={post.id}
+                extraActions={
+                  publicProfile.is_verified_artist && publicProfile.id !== user?.id ? (
+                    tippedPostIds.has(post.id) ? (
+                      <button
+                        aria-label={`You already tipped ${publicProfile.full_name}`}
+                        className="icon-action icon-action--tipped"
+                        disabled
+                        type="button"
+                      >
+                        <TipGlyph />
+                        <span>Tipped</span>
+                      </button>
+                    ) : (
+                      <button
+                        aria-label={`Tip ${publicProfile.full_name}`}
+                        className="icon-action"
+                        onClick={() =>
+                          setTipTarget({
+                            recipientId: publicProfile.id,
+                            recipientName: publicProfile.full_name,
+                            postId: post.id
+                          })
+                        }
+                        type="button"
+                      >
+                        <TipGlyph />
+                        <span>Tip</span>
+                      </button>
+                    )
+                  ) : null
+                }
                 onAutoFocusHandled={() => setFocusPostId(null)}
                 onDelete={async (targetPost) => {
                   if (!user?.id) {
@@ -193,9 +249,29 @@ export const ProfilePostsPage = () => {
                 post={post}
                 viewerId={user?.id ?? ""}
               />
-            ))}
+          ))}
           </div>
         )}
+
+        <ArtistTipSheet
+          isOpen={Boolean(tipTarget)}
+          onClose={() => setTipTarget(null)}
+          onCompleted={() => {
+            if (tipTarget?.postId) {
+              setTippedPostIds((current) => new Set(current).add(tipTarget.postId!));
+            }
+
+            return loadPosts(publicProfile.id).then((nextError) => {
+              if (nextError) {
+                setError(nextError);
+              } else {
+                setError(null);
+              }
+            });
+          }}
+          sender={profile ? { full_name: profile.full_name, email: profile.email } : null}
+          target={tipTarget}
+        />
       </div>
     </section>
   );

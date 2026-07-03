@@ -30,7 +30,7 @@ export const defaultRichPostStyle: RichPostStyle = {
   bodySize: 16,
   titleWeight: 800,
   bodyWeight: 500,
-  titleFont: "space",
+  titleFont: "onest",
   textAlign: "left",
   backgroundMode: "none",
   backgroundColor: "#fff3c4",
@@ -88,15 +88,8 @@ export const getPostContentText = (title: string | null, body: string | null) =>
 };
 
 export const getTitleFontFamily = (font: PostTitleFont) => {
-  if (font === "onest") {
-    return '"Onest", "Segoe UI", sans-serif';
-  }
-
-  if (font === "poppins") {
-    return '"Poppins", "Segoe UI", sans-serif';
-  }
-
-  return '"Space Grotesk", "Segoe UI", sans-serif';
+  void font;
+  return '"Onest", sans-serif';
 };
 
 export const getRichPostStyleVars = (style: RichPostStyle, enableBackground: boolean) => ({

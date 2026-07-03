@@ -55,7 +55,10 @@ Production-oriented starter for a mobile-first creator platform using React, Typ
    Functions added in this repo:
 
    - `create-artist-verification-order`
+   - `create-artist-tip-order`
    - `manage-account-lifecycle`
+   - `tip-dashboard`
+   - `verify-artist-tip-payment`
    - `verify-artist-verification-payment`
 
 5. Start the app:

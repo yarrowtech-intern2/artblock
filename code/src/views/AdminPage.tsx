@@ -14,6 +14,7 @@ import {
   updateAdminUserBlockState,
   uploadCampaignImage
 } from "../lib/admin";
+import { TipDashboardSection } from "../components/dashboard/TipDashboardSection";
 import { useAuth } from "../providers/AuthProvider";
 import type { AdminPostRecord, AdminStats, AdminUserRecord, Campaign } from "../types/admin";
 
@@ -526,6 +527,8 @@ export const AdminPage = () => {
           </div>
         </article>
       ) : null}
+
+      <TipDashboardSection mode="admin" profile={profile} userId={user.id} />
 
       <div className="admin-console__grid">
         <article className="dashboard-card admin-panel">

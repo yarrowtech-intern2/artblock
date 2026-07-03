@@ -195,6 +195,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
     setError(null);
     const redirectTo = `${window.location.origin}/feed`;
+    const location = [input.city.trim(), input.country.trim()].filter(Boolean).join(", ");
+
     try {
       const { error: signUpError } = await supabase.auth.signUp({
         email: input.email,
@@ -203,6 +205,11 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           emailRedirectTo: redirectTo,
           data: {
             full_name: input.fullName,
+            phone: input.phone,
+            gender: input.gender,
+            country: input.country,
+            city: input.city,
+            location: location.length > 0 ? location : null,
             role: input.role,
             accepted_terms: input.acceptedTerms,
             accepted_terms_at: input.acceptedTerms ? new Date().toISOString() : null

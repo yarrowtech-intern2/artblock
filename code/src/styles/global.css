@@ -1,5 +1,5 @@
 :root {
-  font-family: "Poppins", "Segoe UI", sans-serif;
+  font-family: "Onest", sans-serif;
   color: #111111;
   background: #f8f8f7;
   line-height: 1.5;
@@ -53,6 +53,7 @@
 
 * {
   box-sizing: border-box;
+  font-family: "Onest", sans-serif !important;
 }
 
 html {
@@ -2360,7 +2361,7 @@ img {
 }
 
 .auth-route-modal__panel--signup {
-  width: min(100%, 46rem);
+  width: min(100%, 34rem);
 }
 
 .auth-route-modal__panel--signup .auth-card {
@@ -2392,26 +2393,34 @@ img {
   background: #ffffff;
   backdrop-filter: none;
   box-shadow: 0 28px 64px rgba(0, 0, 0, 0.18);
+  font-family: "Onest", "Segoe UI", sans-serif;
 }
 
 .auth-card {
   width: min(100%, 34rem);
 }
 
-.auth-card h1,
-.status-screen h1,
-.dashboard-page h1,
-.feed-hero h1,
-.notifications-page__header h1,
-.public-hero__copy h1,
-.public-card blockquote,
-.avatar-panel__fallback,
-.public-avatar--fallback {
-  font-family: "Poppins", "Segoe UI", sans-serif;
-}
-
 .auth-card__header {
   margin-bottom: 1.2rem;
+}
+
+.auth-card__header .section-heading__eyebrow,
+.auth-card__header h1,
+.auth-card__header p {
+  font-family: "Onest", "Segoe UI", sans-serif;
+}
+
+.auth-card__header .section-heading__eyebrow {
+  font-weight: 500;
+}
+
+.auth-card__header h1 {
+  font-weight: 500;
+  letter-spacing: -0.06em;
+}
+
+.auth-card__header p {
+  font-weight: 400;
 }
 
 .auth-form,
@@ -2424,7 +2433,7 @@ img {
 .auth-form label,
 .role-picker legend {
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .auth-form input {
@@ -2436,7 +2445,18 @@ img {
   background: rgba(255, 255, 255, 0.92);
 }
 
+.auth-form select {
+  width: 100%;
+  margin-top: 0.45rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(18, 52, 59, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: #111111;
+}
+
 .auth-form input:focus,
+.auth-form select:focus,
 .dashboard-form input:focus,
 .dashboard-form textarea:focus,
 .dashboard-form select:focus,
@@ -2459,12 +2479,258 @@ img {
 }
 
 .auth-form__hint code {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: "Onest", sans-serif;
 }
 
 .auth-form__switch a {
   color: var(--accent-strong);
+  font-weight: 500;
+}
+
+.auth-form--signup-flow {
+  gap: 1.1rem;
+}
+
+.signup-flow {
+  display: grid;
+  gap: 1rem;
+}
+
+.signup-flow__progress {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.signup-flow__progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #111111;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.signup-flow__progress-track {
+  position: relative;
+  overflow: hidden;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.08);
+}
+
+.signup-flow__progress-bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #797adb 0%, #111111 100%);
+  transition: width 220ms ease;
+}
+
+.signup-flow__step {
+  display: grid;
+  gap: 1.15rem;
+  min-height: 18.5rem;
+  padding: 1.4rem;
+  border: 1px solid rgba(121, 122, 219, 0.18);
+  border-radius: 1.5rem;
+  background: #ffffff;
+  animation: signup-step-enter 260ms ease;
+}
+
+.signup-flow__copy {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.signup-flow__eyebrow {
+  color: #797adb;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.signup-flow__copy h2 {
+  margin: 0;
+  color: #111111;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-family: "Onest", "Segoe UI", sans-serif;
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.signup-flow__copy p,
+.signup-flow__copy small {
+  margin: 0;
+  font-family: "Onest", "Segoe UI", sans-serif;
+  font-weight: 400;
+  color: rgba(17, 17, 17, 0.7);
+}
+
+.signup-flow__copy small {
+  font-size: 0.88rem;
+}
+
+.signup-flow__field {
+  display: grid;
+  color: #111111;
+}
+
+.signup-flow__field span {
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.signup-flow__field input,
+.signup-flow__field select {
+  margin-top: 0.55rem;
+  min-height: 3.25rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  color: #111111;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.signup-flow__field input:focus,
+.signup-flow__field select:focus {
+  transform: translateY(-1px);
+  border-color: #797adb;
+  box-shadow: 0 0 0 4px rgba(121, 122, 219, 0.14);
+}
+
+.signup-flow__terms {
+  margin: 0;
+  padding: 1rem 1rem 1rem 0.95rem;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 1.2rem;
+  background: #ffffff;
+}
+
+.signup-flow__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.signup-flow__action-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.signup-flow__secondary,
+.signup-flow__skip,
+.signup-flow__primary {
+  min-height: 3rem;
+  padding: 0.8rem 1.2rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.signup-flow__secondary,
+.signup-flow__skip {
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: #ffffff;
+  color: #111111;
+}
+
+.signup-flow__primary {
+  min-width: 8.5rem;
+  border: 0;
+  color: #ffffff;
+  background: linear-gradient(135deg, #797adb 0%, #111111 100%);
+  box-shadow: 0 16px 28px rgba(17, 17, 17, 0.18);
+}
+
+.signup-flow__secondary:hover,
+.signup-flow__secondary:focus-visible,
+.signup-flow__skip:hover,
+.signup-flow__skip:focus-visible,
+.signup-flow__primary:hover,
+.signup-flow__primary:focus-visible {
+  transform: translateY(-1px);
+}
+
+.signup-flow__primary:disabled {
+  cursor: wait;
+  opacity: 0.74;
+}
+
+.signup-success-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 650;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.signup-success-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.signup-success-modal__panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.7rem;
+  width: min(100%, 25rem);
+  padding: 2rem 1.5rem 1.5rem;
+  border-radius: 1.75rem;
+  background: #ffffff;
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.22);
+  text-align: center;
+}
+
+.signup-success-modal__panel h2,
+.signup-success-modal__panel p,
+.signup-success-modal__button {
+  font-family: "Onest", "Segoe UI", sans-serif;
+}
+
+.signup-success-modal__panel h2 {
+  margin: 0;
+  color: #111111;
+  font-size: clamp(2rem, 6vw, 2.6rem);
   font-weight: 700;
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.signup-success-modal__panel p {
+  margin: 0;
+  color: rgba(17, 17, 17, 0.7);
+  font-size: 0.98rem;
+  font-weight: 400;
+}
+
+.signup-success-modal__button {
+  width: 100%;
+  margin-top: 0.45rem;
+}
+
+@keyframes signup-step-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-checkbox {
@@ -2675,6 +2941,197 @@ img {
 
 .dashboard-section__actions .ghost-button {
   min-height: 2.55rem;
+}
+
+.tip-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.tip-dashboard__summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.tip-dashboard__summary-card {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.tip-dashboard__summary-card strong {
+  font-size: 1.2rem;
+  line-height: 1.1;
+}
+
+.tip-dashboard__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tip-dashboard__tab {
+  padding-inline: 0.9rem;
+}
+
+.tip-dashboard__ledger {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.tip-dashboard__leaderboards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.tip-dashboard__leaderboard {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.tip-dashboard__leaderboard-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.tip-dashboard__leaderboard-item {
+  display: grid;
+}
+
+.tip-dashboard__leaderboard-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tip-dashboard__leaderboard-avatar {
+  width: 2.7rem;
+  height: 2.7rem;
+  border-radius: 0.9rem;
+  object-fit: cover;
+}
+
+.tip-dashboard__skeleton {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tip-dashboard__skeleton-card {
+  min-height: 8rem;
+  border-radius: 1.35rem;
+  background: linear-gradient(90deg, rgba(17, 17, 17, 0.05), rgba(17, 17, 17, 0.09), rgba(17, 17, 17, 0.05));
+}
+
+.tip-entry {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tip-entry__topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tip-entry__direction {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.tip-entry__direction-label {
+  color: var(--copy-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tip-entry__amount {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
+}
+
+.tip-entry__amount strong {
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.tip-entry__status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tip-entry__status--paid {
+  color: #0f6b33;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.tip-entry__status--created {
+  color: #8a5b00;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.tip-entry__status--failed {
+  color: #9b1c1c;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.tip-entry__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  color: var(--copy-muted);
+  font-size: 0.84rem;
+}
+
+.tip-entry__meta span:not(:last-child)::after {
+  content: "·";
+  margin-left: 0.7rem;
+  color: rgba(17, 17, 17, 0.32);
+}
+
+.tip-entry__parties {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.tip-entry__party {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.32rem 0.7rem 0.32rem 0.32rem;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.04);
+}
+
+.tip-entry__avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.tip-entry__context-link {
+  min-height: 2.5rem;
+}
+
+.tip-dashboard__empty {
+  justify-items: start;
 }
 
 .dashboard-page .dashboard-card,
@@ -2952,6 +3409,83 @@ img {
 .feed-grid {
   display: grid;
   gap: 1rem;
+}
+
+.feed-grid--hidden {
+  display: none;
+}
+
+.feed-grid--accounts {
+  gap: 0.85rem;
+}
+
+.feed-account-loading {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.feed-account-loading__card {
+  min-height: 5.5rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(90deg, rgba(17, 17, 17, 0.05), rgba(17, 17, 17, 0.09), rgba(17, 17, 17, 0.05));
+}
+
+.feed-account-card {
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1.35rem;
+  border: 1px solid var(--surface-border);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow-md);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.feed-account-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.24);
+  box-shadow: var(--shadow-lg);
+}
+
+.feed-account-card__avatar {
+  flex: 0 0 auto;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1.15rem;
+  object-fit: cover;
+}
+
+.feed-account-card__body {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.feed-account-card__name {
+  min-width: 0;
+}
+
+.feed-account-card__headline {
+  margin: 0;
+  color: var(--copy-muted);
+  font-size: 0.93rem;
+  line-height: 1.45;
+}
+
+.feed-account-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  color: var(--copy-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.feed-account-card__meta span:not(:last-child)::after {
+  content: "·";
+  margin-left: 0.75rem;
+  color: rgba(17, 17, 17, 0.32);
 }
 
 .feed-sentinel {
@@ -4856,7 +5390,7 @@ img {
   padding: 0.15rem 0.35rem;
   border-radius: 0.45rem;
   background: rgba(18, 52, 59, 0.08);
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: "Onest", sans-serif;
 }
 
 .rich-post-surface__body code {
@@ -5956,9 +6490,10 @@ img {
 .public-profile-action-slot {
   display: flex;
   justify-content: flex-end;
-  flex: 0 0 auto;
+  flex: 1 1 24rem;
   padding-top: 0.18rem;
   margin-left: auto;
+  min-width: 0;
 }
 
 .public-profile-menu-shell {
@@ -6110,17 +6645,21 @@ img {
 
 .public-page--showcase .public-profile-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.55rem;
+  max-width: 100%;
 }
 
 .public-page--showcase .public-profile-actions .ghost-button,
 .public-page--showcase .public-profile-actions .solid-button {
+  flex: 0 1 auto;
   min-height: 2.55rem;
   padding: 0.65rem 1rem;
   border-color: color-mix(in srgb, var(--brand-accent) 55%, var(--surface-border));
   color: var(--brand-accent);
   background: color-mix(in srgb, var(--surface-strong) 78%, transparent);
+  white-space: nowrap;
 }
 
 .public-page--showcase .public-profile-actions .solid-button {
@@ -6165,12 +6704,7 @@ img {
 }
 
 .public-profile-stat__icon {
-  display: grid;
-  place-items: center;
-  width: auto;
-  height: auto;
-  color: var(--brand-accent);
-  background: transparent;
+  display: none;
 }
 
 .public-profile-stat--followers .public-profile-stat__icon {
@@ -8552,6 +9086,21 @@ img {
   color: var(--save-color);
 }
 
+.icon-action--tipped {
+  color: #15803d;
+  background: rgba(22, 163, 74, 0.12);
+}
+
+.icon-action--tipped:hover:not(:disabled) {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.icon-action--tipped:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
 /* ─── FeedCard polish ────────────────────────────────────────── */
 
 .feed-card {
@@ -9516,6 +10065,7 @@ img {
 
   .public-page--showcase .public-profile-actions .ghost-button,
   .public-page--showcase .public-profile-actions .solid-button {
+    flex: initial;
     min-height: 2.3rem;
     padding: 0.55rem 0.5rem;
     font-size: 0.78rem;
@@ -9642,6 +10192,19 @@ img {
   .dashboard-workspace__side,
   .dashboard-section {
     gap: 0.75rem;
+  }
+
+  .tip-dashboard__summary-grid,
+  .tip-dashboard__leaderboards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tip-entry__topline {
+    align-items: flex-start;
+  }
+
+  .tip-entry__amount {
+    justify-items: start;
   }
 
   .dashboard-section__heading {
@@ -9775,6 +10338,23 @@ img {
     width: 100%;
     border-radius: 1.5rem;
     box-shadow: var(--shadow-md);
+  }
+
+  .signup-flow__step {
+    min-height: 16.5rem;
+    padding: 1.1rem;
+  }
+
+  .signup-flow__actions,
+  .signup-flow__action-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .signup-flow__secondary,
+  .signup-flow__skip,
+  .signup-flow__primary {
+    width: 100%;
   }
 }
 

@@ -263,6 +263,9 @@ export const updateProfile = async (
     | "bio"
     | "website"
     | "location"
+    | "phone"
+    | "country"
+    | "city"
     | "avatar_url"
     | "cover_url"
     | "gender"
@@ -338,6 +341,29 @@ export const createArtistVerificationOrder = async () => {
   };
 };
 
+const getEdgeFunctionErrorMessage = (
+  data: unknown,
+  error: { message?: string | null } | null | undefined,
+  fallbackMessage: string
+) => {
+  const dataError =
+    typeof data === "object" && data && "error" in data && typeof data.error === "string"
+      ? data.error
+      : null;
+
+  if (dataError) {
+    return dataError;
+  }
+
+  const rawMessage = error?.message ?? null;
+
+  if (rawMessage === "Failed to send a request to the Edge Function") {
+    return fallbackMessage;
+  }
+
+  return rawMessage ?? null;
+};
+
 export const verifyArtistVerificationPayment = async (input: {
   orderId: string;
   paymentId: string;
@@ -365,7 +391,7 @@ export const verifyArtistVerificationPayment = async (input: {
 };
 
 export const createArtistTipOrder = async (input: {
-  postId: string;
+  postId?: string | null;
   recipientId: string;
   amountRupees: number;
   message?: string | null;
@@ -390,12 +416,11 @@ export const createArtistTipOrder = async (input: {
           recipientName: string;
         }
       | null,
-    error:
-      (typeof data === "object" && data && "error" in data && typeof data.error === "string"
-        ? data.error
-        : null) ??
-      error?.message ??
-      null
+    error: getEdgeFunctionErrorMessage(
+      data,
+      error,
+      "Tip payments are unavailable because the `create-artist-tip-order` Edge Function is not reachable. Deploy that function and confirm its Supabase and Razorpay secrets are set."
+    )
   };
 };
 
@@ -416,12 +441,11 @@ export const verifyArtistTipPayment = async (input: {
 
   return {
     data: (data ?? null) as { verified: boolean } | null,
-    error:
-      (typeof data === "object" && data && "error" in data && typeof data.error === "string"
-        ? data.error
-        : null) ??
-      error?.message ??
-      null
+    error: getEdgeFunctionErrorMessage(
+      data,
+      error,
+      "Tip payment verification is unavailable because the `verify-artist-tip-payment` Edge Function is not reachable. Deploy that function and confirm its Supabase and Razorpay secrets are set."
+    )
   };
 };
 
@@ -568,6 +592,56 @@ export const fetchPublicProfileBySlug = async (slug: string) => {
   return {
     data: mapped,
     error: error?.message ?? (mapped ? null : "Profile not found.")
+  };
+};
+
+export const searchPublicProfiles = async (query: string, limit = 12) => {
+  const supabase = getSupabaseClient();
+  const searchTerm = query.trim().replace(/^@/, "");
+
+  if (!supabase) {
+    return { data: [] as PublicProfile[], error: "Supabase is not configured." };
+  }
+
+  if (!searchTerm) {
+    return { data: [] as PublicProfile[], error: null };
+  }
+
+  const ilikePattern = `%${searchTerm}%`;
+  const searchableFields = ["full_name", "username", "headline", "bio", "creator_slug"] as const;
+  const results = new Map<string, PublicProfile>();
+  const errors: string[] = [];
+
+  const responses = await Promise.all(
+    searchableFields.map(async (field) =>
+      supabase.from("public_member_profiles").select("*").ilike(field, ilikePattern).limit(limit)
+    )
+  );
+
+  responses.forEach((response) => {
+    if (response.error) {
+      errors.push(response.error.message);
+      return;
+    }
+
+    ((response.data ?? []) as Database["public"]["Views"]["public_member_profiles"]["Row"][]).forEach((row) => {
+      const mapped = mapPublicProfile(row);
+
+      if (mapped && !results.has(mapped.id)) {
+        results.set(mapped.id, mapped);
+      }
+    });
+  });
+
+  const data = Array.from(results.values()).sort((left, right) => {
+    const leftName = left.full_name.toLowerCase();
+    const rightName = right.full_name.toLowerCase();
+    return leftName.localeCompare(rightName);
+  });
+
+  return {
+    data: data.slice(0, limit),
+    error: data.length > 0 ? null : errors[0] ?? null
   };
 };
 
@@ -2203,7 +2277,8 @@ const hydrateFeedPosts = async (
     commentsResponse,
     likesResponse,
     votesResponse,
-    bookmarksResponse
+    bookmarksResponse,
+    tipsResponse
   ] = await Promise.all([
     supabase.from("post_engagement_stats").select("*").in("post_id", postIds),
     supabase.from("poll_option_results").select("*").in("post_id", postIds),
@@ -2215,7 +2290,13 @@ const hydrateFeedPosts = async (
       .eq("reaction_type", "like")
       .in("post_id", postIds),
     supabase.from("post_poll_votes").select("post_id, option_id").eq("user_id", viewerId).in("post_id", postIds),
-    supabase.from("post_bookmarks").select("post_id").eq("user_id", viewerId).in("post_id", postIds)
+    supabase.from("post_bookmarks").select("post_id").eq("user_id", viewerId).in("post_id", postIds),
+    supabase
+      .from("artist_tips")
+      .select("post_id")
+      .eq("sender_id", viewerId)
+      .eq("status", "paid")
+      .in("post_id", postIds)
   ]);
 
   const statsMap = new Map(
@@ -2283,6 +2364,11 @@ const hydrateFeedPosts = async (
   const savedSet = new Set(
     ((bookmarksResponse.data ?? []) as { post_id: string }[]).map((row) => row.post_id)
   );
+  const tippedSet = new Set(
+    (((tipsResponse.data ?? []) as { post_id: string | null }[])
+      .map((row) => row.post_id)
+      .filter((postId): postId is string => Boolean(postId)))
+  );
 
   const votedMap = new Map(
     ((votesResponse.data ?? []) as { post_id: string; option_id: string }[]).map((row) => [
@@ -2300,6 +2386,7 @@ const hydrateFeedPosts = async (
         comment_count: statsMap.get(post.id)?.comment_count ?? 0,
         share_count: statsMap.get(post.id)?.share_count ?? post.share_count ?? 0,
         tip_total_paise: statsMap.get(post.id)?.tip_total_paise ?? post.tip_total_paise ?? 0,
+        tipped_by_viewer: tippedSet.has(post.id),
         liked_by_viewer: likedSet.has(post.id),
         saved_by_viewer: savedSet.has(post.id),
         poll_options: (pollOptionsMap.get(post.id) ?? []).sort((a, b) => a.position - b.position),

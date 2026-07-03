@@ -43,12 +43,12 @@ export const SignupPage = () => {
               onClick={() => navigate("/")}
               type="button"
             >
-              ×
+              x
             </button>
 
             <AuthCard
               title="Create your account"
-              subtitle="Create your account, agree to the terms, and complete email confirmation."
+              subtitle="Move through your details one step at a time, then confirm your email to finish."
             >
               <SignupForm />
             </AuthCard>

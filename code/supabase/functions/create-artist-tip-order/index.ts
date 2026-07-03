@@ -62,13 +62,13 @@ Deno.serve(async (request) => {
   }
 
   const body = await request.json().catch(() => null);
-  const postId = typeof body?.postId === "string" ? body.postId : "";
+  const postId = typeof body?.postId === "string" ? body.postId : null;
   const recipientId = typeof body?.recipientId === "string" ? body.recipientId : "";
   const amountRupees = Number(body?.amountRupees ?? 0);
   const message = typeof body?.message === "string" ? body.message.trim().slice(0, 240) : null;
   const amountPaise = Math.round(amountRupees * 100);
 
-  if (!postId || !recipientId || !Number.isFinite(amountPaise)) {
+  if (!recipientId || !Number.isFinite(amountPaise)) {
     return jsonResponse({ error: "Missing tip payment fields." }, 400);
   }
 
@@ -94,22 +94,24 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Tips can only be sent to creators." }, 400);
   }
 
-  const { data: post, error: postError } = await adminClient
-    .from("posts")
-    .select("id, author_id, surface, tip_enabled, is_published")
-    .eq("id", postId)
-    .single();
+  if (postId) {
+    const { data: post, error: postError } = await adminClient
+      .from("posts")
+      .select("id, author_id, tip_enabled, is_published")
+      .eq("id", postId)
+      .single();
 
-  if (postError || !post) {
-    return jsonResponse({ error: "Short post not found." }, 404);
-  }
+    if (postError || !post) {
+      return jsonResponse({ error: "Post not found." }, 404);
+    }
 
-  if (!post.is_published || post.surface !== "short" || post.author_id !== recipientId) {
-    return jsonResponse({ error: "Tips are only supported on published reels from this artist." }, 400);
-  }
+    if (!post.is_published || post.author_id !== recipientId) {
+      return jsonResponse({ error: "Tips are only supported on published posts from this artist." }, 400);
+    }
 
-  if (!post.tip_enabled) {
-    return jsonResponse({ error: "This artist has disabled tips on the selected reel." }, 400);
+    if (!post.tip_enabled) {
+      return jsonResponse({ error: "This artist has disabled tips on the selected post." }, 400);
+    }
   }
 
   const receipt = `artist_tip_${user.id.slice(0, 8)}_${Date.now()}`;
@@ -127,7 +129,7 @@ Deno.serve(async (request) => {
         flow: "artist_tip",
         sender_id: user.id,
         recipient_id: recipientId,
-        post_id: postId
+        post_id: postId ?? ""
       }
     })
   });

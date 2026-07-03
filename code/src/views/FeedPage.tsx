@@ -4,13 +4,23 @@ import { CampaignCard } from "../components/feed/CampaignCard";
 import { FeedCard } from "../components/feed/FeedCard";
 import { FeedTopTabs } from "../components/feed/FeedTopTabs";
 import { CreateOptionsMenu } from "../components/create/CreateOptionsMenu";
+import { ProfileAvatar } from "../components/shared/ProfileAvatar";
+import { ArtistTipSheet, type ArtistTipTarget } from "../components/tips/ArtistTipSheet";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
 import { fetchActiveCampaigns } from "../lib/admin";
 import { getIdentityNameClass } from "../lib/identity";
-import { deletePost, fetchActiveStories, fetchFeedPostById, fetchFeedPosts, markStoryViewed, type FeedScope } from "../lib/profile";
+import {
+  deletePost,
+  fetchActiveStories,
+  fetchFeedPostById,
+  fetchFeedPosts,
+  markStoryViewed,
+  searchPublicProfiles,
+  type FeedScope
+} from "../lib/profile";
 import { useAuth } from "../providers/AuthProvider";
 import type { Campaign } from "../types/admin";
-import type { FeedPost, StoryGroup } from "../types/auth";
+import type { FeedPost, PublicProfile, StoryGroup } from "../types/auth";
 import { StoriesRail } from "../components/stories/StoriesRail";
 import { StoryViewer } from "../components/stories/StoryViewer";
 
@@ -21,6 +31,8 @@ const isFeedScope = (value: string | null): value is FeedScope =>
 type FeedListItem =
   | { type: "post"; post: FeedPost }
   | { type: "campaign"; campaign: Campaign; key: string };
+
+type AccountSearchResult = PublicProfile;
 
 const hashString = (value: string) =>
   value.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
@@ -76,6 +88,18 @@ const FeedSkeleton = () => (
   </div>
 );
 
+const TipGlyph = () => (
+  <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+    <path
+      d="M12 3v18m4-13.5c0-1.933-1.79-3.5-4-3.5S8 5.567 8 7.5 9.79 11 12 11s4 1.567 4 3.5S14.21 18 12 18s-4-1.567-4-3.5"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.75"
+    />
+  </svg>
+);
+
 export const FeedPage = () => {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
@@ -99,7 +123,13 @@ export const FeedPage = () => {
   const [isCreateMenuOpen, setCreateMenuOpen] = useState(false);
   const [activeStoryAuthorId, setActiveStoryAuthorId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
+  const [accountResults, setAccountResults] = useState<AccountSearchResult[]>([]);
+  const [isSearchingAccounts, setSearchingAccounts] = useState(false);
+  const [accountSearchError, setAccountSearchError] = useState<string | null>(null);
+  const [tipTarget, setTipTarget] = useState<ArtistTipTarget | null>(null);
+  const [tippedPostIds, setTippedPostIds] = useState<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const accountSearchRequestRef = useRef(0);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
 
@@ -108,27 +138,9 @@ export const FeedPage = () => {
     [campaigns]
   );
   const desktopCampaign = railCampaigns.length > 0 ? railCampaigns[campaignRotationIndex % railCampaigns.length] : null;
-  const filteredPosts = useMemo(() => {
-    if (!normalizedSearchQuery) {
-      return posts;
-    }
-
-    return posts.filter((post) => {
-      const searchHaystack = [
-        post.full_name,
-        post.username,
-        post.headline,
-        post.title,
-        post.body
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return searchHaystack.includes(normalizedSearchQuery);
-    });
-  }, [normalizedSearchQuery, posts]);
-  const feedItems = useMemo(() => buildFeedItems(filteredPosts, campaigns), [filteredPosts, campaigns]);
+  const isAccountSearchActive = normalizedSearchQuery.length > 0;
+  const filteredPosts = posts;
+  const feedItems = useMemo(() => buildFeedItems(posts, campaigns), [posts, campaigns]);
   const dashboardTarget = profile?.role === "admin" ? "/admin" : "/dashboard";
   const dashboardLabel =
     profile?.role === "creator"
@@ -149,6 +161,39 @@ export const FeedPage = () => {
     setFeedScope(nextScope);
     setSearchQuery(searchParams.get("q") ?? "");
   }, [searchParams]);
+
+  useEffect(() => {
+    const searchTerm = deferredSearchQuery.trim();
+
+    if (!searchTerm) {
+      accountSearchRequestRef.current += 1;
+      setAccountResults([]);
+      setSearchingAccounts(false);
+      setAccountSearchError(null);
+      return;
+    }
+
+    const requestId = accountSearchRequestRef.current + 1;
+    accountSearchRequestRef.current = requestId;
+    setSearchingAccounts(true);
+    setAccountSearchError(null);
+
+    void searchPublicProfiles(searchTerm).then((result) => {
+      if (accountSearchRequestRef.current !== requestId) {
+        return;
+      }
+
+      setSearchingAccounts(false);
+
+      if (result.error) {
+        setAccountResults([]);
+        setAccountSearchError(result.error);
+        return;
+      }
+
+      setAccountResults(result.data);
+    });
+  }, [deferredSearchQuery]);
 
   useEffect(() => {
     if (!user) {
@@ -263,6 +308,16 @@ export const FeedPage = () => {
     });
   }, [posts, targetPostId, user?.id]);
 
+  useEffect(() => {
+    setTippedPostIds(
+      new Set(
+        posts
+          .filter((post) => post.tipped_by_viewer)
+          .map((post) => post.id)
+      )
+    );
+  }, [posts]);
+
   const clearNotificationTarget = () => {
     if (!targetPostId && !targetAction) {
       return;
@@ -354,8 +409,8 @@ export const FeedPage = () => {
   }, [feedScope, hasMore, isLoading, isLoadingMore, page, user?.id]);
 
   const emptyFeedCopy =
-    normalizedSearchQuery
-      ? `No posts or creators matched "${deferredSearchQuery.trim()}".`
+    isAccountSearchActive
+      ? `No accounts matched "${deferredSearchQuery.trim()}".`
       : feedScope === "following"
       ? "Follow a few profiles to build a relationship-based feed."
       : feedScope === "subscribed"
@@ -435,10 +490,19 @@ export const FeedPage = () => {
           />
 
           {error ? <div className="auth-message auth-message--error">{error}</div> : null}
+          {accountSearchError ? <div className="auth-message auth-message--error">{accountSearchError}</div> : null}
+
+          {isAccountSearchActive && isSearchingAccounts ? (
+            <div className="feed-account-loading" aria-live="polite">
+              <div className="feed-account-loading__card shimmer" />
+              <div className="feed-account-loading__card shimmer" />
+              <div className="feed-account-loading__card shimmer" />
+            </div>
+          ) : null}
 
           {isLoading ? <FeedSkeleton /> : null}
 
-          {!isLoading && filteredPosts.length === 0 ? (
+          {!isLoading && !isAccountSearchActive && filteredPosts.length === 0 ? (
             <div className="empty-feed">
               <div className="empty-feed__icon" aria-hidden="true">
                 <svg fill="none" height="40" viewBox="0 0 24 24" width="40">
@@ -457,7 +521,56 @@ export const FeedPage = () => {
             </div>
           ) : null}
 
-          <div className="feed-grid">
+          {isAccountSearchActive && !isSearchingAccounts && accountResults.length === 0 ? (
+            <div className="empty-feed">
+              <div className="empty-feed__icon" aria-hidden="true">
+                <svg fill="none" height="40" viewBox="0 0 24 24" width="40">
+                  <path d="M14.5 14.5 20 20" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+                  <circle cx="10.5" cy="10.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              </div>
+              <span className="section-heading__eyebrow">Account search</span>
+              <h2>No accounts found.</h2>
+              <p>{emptyFeedCopy}</p>
+            </div>
+          ) : null}
+
+          {isAccountSearchActive && !isSearchingAccounts && accountResults.length > 0 ? (
+            <div className="feed-grid feed-grid--accounts">
+              {accountResults.map((account) => (
+                <Link
+                  className="feed-account-card"
+                  key={account.id}
+                  to={account.creator_slug ? `/creators/${account.creator_slug}` : `/profiles/${account.id}`}
+                >
+                  <ProfileAvatar
+                    alt={account.full_name}
+                    className="feed-account-card__avatar"
+                    name={account.full_name}
+                    src={account.avatar_url}
+                  />
+                  <div className="feed-account-card__body">
+                    <div className="profile-name-row feed-account-card__name">
+                      <span className={getIdentityNameClass(account.role)}>
+                        {account.username ? `@${account.username}` : account.full_name}
+                      </span>
+                      {account.is_verified_artist ? <VerifiedArtistBadge /> : null}
+                    </div>
+                    <p className="feed-account-card__headline">
+                      {account.headline ?? account.bio ?? "Open profile"}
+                    </p>
+                    <div className="feed-account-card__meta">
+                      <span>{account.role === "creator" ? "Creator" : "Community member"}</span>
+                      <span>{account.follower_count} followers</span>
+                      <span>{account.post_count} posts</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : null}
+
+          <div className={`feed-grid${isAccountSearchActive ? " feed-grid--hidden" : ""}`}>
             {feedItems.map((item) =>
               item.type === "campaign" ? (
                 <CampaignCard campaign={item.campaign} key={item.key} mode="inline" />
@@ -470,6 +583,37 @@ export const FeedPage = () => {
                   canDelete={item.post.author_id === user?.id}
                   isDeleting={deletingPostId === item.post.id}
                   key={item.post.id}
+                  extraActions={
+                    item.post.is_verified_artist && item.post.tip_enabled !== false ? (
+                      tippedPostIds.has(item.post.id) ? (
+                        <button
+                          aria-label={`You already tipped ${item.post.full_name}`}
+                          className="icon-action icon-action--tipped"
+                          disabled
+                          type="button"
+                        >
+                          <TipGlyph />
+                          <span>Tipped</span>
+                        </button>
+                      ) : (
+                        <button
+                          aria-label={`Tip ${item.post.full_name}`}
+                          className="icon-action"
+                          onClick={() =>
+                            setTipTarget({
+                              recipientId: item.post.author_id,
+                              recipientName: item.post.full_name,
+                              postId: item.post.id
+                            })
+                          }
+                          type="button"
+                        >
+                          <TipGlyph />
+                          <span>Tip</span>
+                        </button>
+                      )
+                    ) : null
+                  }
                   onAutoFocusHandled={clearNotificationTarget}
                   onDelete={async (targetPost) => {
                     if (!user) {
@@ -497,9 +641,9 @@ export const FeedPage = () => {
             )}
           </div>
 
-          {!isLoading && posts.length > 0 ? <div className="feed-sentinel" ref={sentinelRef} /> : null}
+          {!isLoading && !isAccountSearchActive && posts.length > 0 ? <div className="feed-sentinel" ref={sentinelRef} /> : null}
 
-          {isLoadingMore ? (
+          {isLoadingMore && !isAccountSearchActive ? (
             <div className="feed-loading feed-loading--inline">
               <div className="feed-loading__dot" />
               <div className="feed-loading__dot" />
@@ -507,7 +651,7 @@ export const FeedPage = () => {
             </div>
           ) : null}
 
-          {!isLoading && !hasMore && filteredPosts.length > 0 ? (
+          {!isLoading && !isAccountSearchActive && !hasMore && filteredPosts.length > 0 ? (
             <div className="feed-end-cap">
               <span>·</span>
               <span className="section-heading__eyebrow">You're all caught up</span>
@@ -517,6 +661,20 @@ export const FeedPage = () => {
         </div>
 
         {/* Right sidebar — desktop only */}
+        <ArtistTipSheet
+          isOpen={Boolean(tipTarget)}
+          onClose={() => setTipTarget(null)}
+          onCompleted={() => {
+            if (tipTarget?.postId) {
+              setTippedPostIds((current) => new Set(current).add(tipTarget.postId!));
+            }
+
+            return loadFeed({ scope: feedScope, page: 0, append: false });
+          }}
+          sender={profile ? { full_name: profile.full_name, email: profile.email } : null}
+          target={tipTarget}
+        />
+
         <aside className="feed-sidebar feed-sidebar--right">
           {profile?.role === "creator" ? (
             <div className="feed-rail-card feed-create-card">

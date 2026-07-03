@@ -23,6 +23,9 @@ export type Profile = {
   avatar_url: string | null;
   cover_url: string | null;
   gender: ProfileGender | null;
+  phone: string | null;
+  country: string | null;
+  city: string | null;
   website: string | null;
   location: string | null;
   created_at: string;
@@ -175,6 +178,7 @@ export type FeedPost = {
   media_width?: number | null;
   media_height?: number | null;
   tip_enabled?: boolean;
+  tipped_by_viewer?: boolean;
   share_count?: number;
   tip_total_paise?: number;
   created_at: string;
@@ -407,6 +411,10 @@ export type SignUpInput = {
   email: string;
   password: string;
   fullName: string;
+  phone: string | null;
+  gender: ProfileGender;
+  country: string;
+  city: string;
   role: AppRole;
   acceptedTerms: boolean;
 };

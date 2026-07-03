@@ -719,6 +719,9 @@ export type Database = {
           avatar_url: string | null;
           cover_url: string | null;
           gender: ProfileGender | null;
+          phone: string | null;
+          country: string | null;
+          city: string | null;
           website: string | null;
           location: string | null;
           created_at: string;
@@ -736,6 +739,9 @@ export type Database = {
           avatar_url?: string | null;
           cover_url?: string | null;
           gender?: ProfileGender | null;
+          phone?: string | null;
+          country?: string | null;
+          city?: string | null;
           website?: string | null;
           location?: string | null;
           created_at?: string;
@@ -753,6 +759,9 @@ export type Database = {
           avatar_url?: string | null;
           cover_url?: string | null;
           gender?: ProfileGender | null;
+          phone?: string | null;
+          country?: string | null;
+          city?: string | null;
           website?: string | null;
           location?: string | null;
           created_at?: string;
@@ -1319,6 +1328,10 @@ export type Database = {
       mark_all_notifications_read: {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
+      };
+      get_tip_dashboard: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
       };
     };
     Enums: {

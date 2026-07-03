@@ -36,9 +36,7 @@ const emptyPollOptions = ["", ""];
 const titleWeightOptions: RichPostStyle["titleWeight"][] = [700, 800, 900];
 const bodyWeightOptions: RichPostStyle["bodyWeight"][] = [400, 500, 600, 700];
 const titleFontOptions = [
-  { label: "Space Grotesk", value: "space" },
-  { label: "Onest", value: "onest" },
-  { label: "Poppins", value: "poppins" }
+  { label: "Onest", value: "onest" }
 ] as const;
 const textAlignOptions: PostTextAlign[] = ["left", "center", "right"];
 

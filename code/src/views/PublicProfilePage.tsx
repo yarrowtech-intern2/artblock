@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ProfileAvatar } from "../components/shared/ProfileAvatar";
 import { VerifiedArtistBadge } from "../components/shared/VerifiedArtistBadge";
+import { ArtistTipSheet, type ArtistTipTarget } from "../components/tips/ArtistTipSheet";
 import { getIdentityNameClass } from "../lib/identity";
 import { getPostContentText } from "../lib/postRichContent";
 import {
@@ -50,55 +51,6 @@ const getVerifiedArtistTooltip = (gender: ProfileGender | null) => {
 };
 
 type ProfileStatIconKind = "posts" | "followers" | "following" | "subs" | "pals";
-
-const ProfileStatIcon = ({ kind }: { kind: ProfileStatIconKind }) => {
-  if (kind === "posts") {
-    return (
-      <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-        <rect height="6" rx="1.5" stroke="currentColor" strokeWidth="1.8" width="6" x="4" y="4" />
-        <rect height="6" rx="1.5" stroke="currentColor" strokeWidth="1.8" width="6" x="14" y="4" />
-        <rect height="6" rx="1.5" stroke="currentColor" strokeWidth="1.8" width="6" x="4" y="14" />
-        <rect height="6" rx="1.5" stroke="currentColor" strokeWidth="1.8" width="6" x="14" y="14" />
-      </svg>
-    );
-  }
-
-  if (kind === "followers") {
-    return (
-      <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-        <path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M16 10a2.5 2.5 0 1 0 0-5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-        <path d="M3.5 19c.7-3.1 2.3-4.7 4.5-4.7s3.8 1.6 4.5 4.7" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-        <path d="M14.5 14.6c1.8.4 3 1.8 3.7 4.4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-      </svg>
-    );
-  }
-
-  if (kind === "following") {
-    return (
-      <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M5 20c.9-3.7 3.2-5.6 7-5.6s6.1 1.9 7 5.6" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-      </svg>
-    );
-  }
-
-  if (kind === "pals") {
-    return (
-      <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-        <path d="M8.5 13.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M15.5 13.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M3.8 19.3c.8-2.9 2.5-4.3 4.7-4.3 1.4 0 2.6.6 3.5 1.8.9-1.2 2.1-1.8 3.5-1.8 2.2 0 3.9 1.4 4.7 4.3" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-      <path d="m12 3 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7L6.8 19l1-5.8-4.2-4.1 5.8-.8L12 3Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
-    </svg>
-  );
-};
 
 type ProfilePostTileProps = {
   onOpen: (post: FeedPost) => void;
@@ -157,6 +109,18 @@ const ProfilePostTile = ({ onOpen, post }: ProfilePostTileProps) => {
   );
 };
 
+const TipGlyph = () => (
+  <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+    <path
+      d="M12 3v18m4-13.5c0-1.933-1.79-3.5-4-3.5S8 5.567 8 7.5 9.79 11 12 11s4 1.567 4 3.5S14.21 18 12 18s-4-1.567-4-3.5"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.75"
+    />
+  </svg>
+);
+
 const PublicProfileSkeleton = () => (
   <section className="public-page public-page--instagram profile-page-skeleton">
     <header className="public-profile-showcase profile-page-skeleton__showcase">
@@ -204,7 +168,7 @@ const PublicProfileSkeleton = () => (
 export const PublicProfilePage = () => {
   const { id, slug } = useParams();
   const navigate = useNavigate();
-  const { status, user } = useAuth();
+  const { profile, status, user } = useAuth();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const postsGridRef = useRef<HTMLDivElement | null>(null);
   const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);
@@ -224,6 +188,7 @@ export const PublicProfilePage = () => {
   const [isDirectoryLoading, setDirectoryLoading] = useState(false);
   const [palCount, setPalCount] = useState(0);
   const [creatorCommunity, setCreatorCommunity] = useState<CreatorCommunity | null>(null);
+  const [tipTarget, setTipTarget] = useState<ArtistTipTarget | null>(null);
 
   const isOwnProfile = Boolean(user?.id && publicProfile?.id === user.id);
 
@@ -841,17 +806,37 @@ export const PublicProfilePage = () => {
                         {relationship.is_subscribed ? "Subscribed" : "Subscribe"}
                       </button>
                     ) : null}
+                  <button
+                    className="ghost-button"
+                    disabled={isMutating || (status === "authenticated" && !canMessageProfile)}
+                    onClick={() => void handleMessage()}
+                    type="button"
+                  >
+                    {messageLabel}
+                  </button>
+                  {!isOwnProfile && publicProfile.is_verified_artist ? (
                     <button
                       className="ghost-button"
-                      disabled={isMutating || (status === "authenticated" && !canMessageProfile)}
-                      onClick={() => void handleMessage()}
+                      onClick={() => {
+                        if (!user?.id) {
+                          navigate("/login");
+                          return;
+                        }
+
+                        setTipTarget({
+                          recipientId: publicProfile.id,
+                          recipientName: publicProfile.full_name,
+                          postId: null
+                        });
+                      }}
                       type="button"
                     >
-                      {messageLabel}
+                      Tip artist
                     </button>
-                    {canShowCommunityButton ? (
-                      <button
-                        className="ghost-button"
+                  ) : null}
+                  {canShowCommunityButton ? (
+                    <button
+                      className="ghost-button"
                         disabled={isMutating}
                         onClick={() => void handleCommunityAction()}
                         type="button"
@@ -872,9 +857,6 @@ export const PublicProfilePage = () => {
                   onClick={() => handleStatAction(stat.kind)}
                   type="button"
                 >
-                  <span className="public-profile-stat__icon">
-                    <ProfileStatIcon kind={stat.kind} />
-                  </span>
                   <strong>{formatProfileStatCount(stat.value)}</strong>
                   <span>{stat.label}</span>
                 </button>
@@ -949,6 +931,13 @@ export const PublicProfilePage = () => {
           ))}
         </div>
       )}
+
+      <ArtistTipSheet
+        isOpen={Boolean(tipTarget)}
+        onClose={() => setTipTarget(null)}
+        sender={profile ? { full_name: profile.full_name, email: profile.email } : null}
+        target={tipTarget}
+      />
 
       {activeDirectory ? (
         <div className="public-profile-sheet" role="dialog" aria-modal="true" aria-labelledby="public-profile-sheet-title">

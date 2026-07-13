@@ -159,6 +159,7 @@ export const SignupForm = () => {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isSuccessOpen, setSuccessOpen] = useState(false);
   const [isSubmitting, setSubmitting] = useState(false);
+  const [isPasswordVisible, setPasswordVisible] = useState(false);
   const [formState, setFormState] = useState<SignupFormState>({
     fullName: "",
     email: "",
@@ -299,18 +300,28 @@ export const SignupForm = () => {
         return (
           <label className="signup-flow__field">
             <span>{fieldLabels.password}</span>
-            <input
-              autoComplete="new-password"
-              autoFocus
-              name="password"
-              onChange={(event) => {
-                setFieldError(null);
-                setFormState((current) => ({ ...current, password: event.target.value }));
-              }}
-              placeholder="Minimum 8 characters"
-              type="password"
-              value={formState.password}
-            />
+            <div className="auth-password-field">
+              <input
+                autoComplete="new-password"
+                autoFocus
+                name="password"
+                onChange={(event) => {
+                  setFieldError(null);
+                  setFormState((current) => ({ ...current, password: event.target.value }));
+                }}
+                placeholder="Minimum 8 characters"
+                type={isPasswordVisible ? "text" : "password"}
+                value={formState.password}
+              />
+              <button
+                aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+                className="auth-password-field__toggle"
+                onClick={() => setPasswordVisible((current) => !current)}
+                type="button"
+              >
+                {isPasswordVisible ? "Hide" : "Show"}
+              </button>
+            </div>
           </label>
         );
       case "gender":

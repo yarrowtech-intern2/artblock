@@ -21,6 +21,7 @@ export const LoginForm = () => {
   });
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
+  const [isPasswordVisible, setPasswordVisible] = useState(false);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -72,16 +73,26 @@ export const LoginForm = () => {
 
       <label>
         Password
-        <input
-          autoComplete="current-password"
-          name="password"
-          onChange={(event) =>
-            setFormState((current) => ({ ...current, password: event.target.value }))
-          }
-          placeholder="Enter your password"
-          type="password"
-          value={formState.password}
-        />
+        <div className="auth-password-field">
+          <input
+            autoComplete="current-password"
+            name="password"
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, password: event.target.value }))
+            }
+            placeholder="Enter your password"
+            type={isPasswordVisible ? "text" : "password"}
+            value={formState.password}
+          />
+          <button
+            aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+            className="auth-password-field__toggle"
+            onClick={() => setPasswordVisible((current) => !current)}
+            type="button"
+          >
+            {isPasswordVisible ? "Hide" : "Show"}
+          </button>
+        </div>
       </label>
 
       <label className="auth-checkbox">

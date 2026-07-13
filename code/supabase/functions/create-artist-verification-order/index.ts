@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ARTIST_VERIFICATION_AMOUNT_PAISE = 49900;
+const ARTIST_VERIFICATION_AMOUNT_PAISE = 589900;
 const ARTIST_VERIFICATION_CURRENCY = "INR";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -78,6 +78,18 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "This artist account is already verified." }, 400);
   }
 
+  const body = await request.json().catch(() => null);
+  const fullName = typeof body?.fullName === "string" ? body.fullName.trim() : "";
+  const instagramLink = typeof body?.instagramLink === "string" ? body.instagramLink.trim() : "";
+  const identityIdNumber =
+    typeof body?.identityIdNumber === "string" ? body.identityIdNumber.trim() : "";
+  const description = typeof body?.description === "string" ? body.description.trim() : "";
+  const addressDetails = typeof body?.addressDetails === "string" ? body.addressDetails.trim() : "";
+
+  if (!fullName || !instagramLink || !identityIdNumber || !description || !addressDetails) {
+    return jsonResponse({ error: "All verification form fields are required." }, 400);
+  }
+
   const receipt = `artist_verify_${user.id.slice(0, 8)}_${Date.now()}`;
   const razorpayOrderResponse = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
@@ -117,7 +129,14 @@ Deno.serve(async (request) => {
       currency: ARTIST_VERIFICATION_CURRENCY,
       status: "created",
       metadata: {
-        receipt
+        receipt,
+        verification_form: {
+          full_name: fullName,
+          instagram_link: instagramLink,
+          identity_id_number: identityIdNumber,
+          description,
+          address_details: addressDetails
+        }
       }
     },
     {

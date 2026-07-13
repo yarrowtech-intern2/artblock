@@ -17,7 +17,7 @@ type CreatorAccessPanelProps = {
   onRefreshCreatorProfile: () => Promise<void>;
 };
 
-const ARTIST_VERIFICATION_PRICE_LABEL = "Rs 499";
+const ARTIST_VERIFICATION_PRICE_LABEL = "Rs 5899";
 
 export const CreatorAccessPanel = ({
   creatorProfile,
@@ -29,6 +29,13 @@ export const CreatorAccessPanel = ({
   const [isStartingVerification, setStartingVerification] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [verificationForm, setVerificationForm] = useState({
+    fullName: profile.full_name ?? "",
+    instagramLink: "",
+    identityIdNumber: "",
+    description: "",
+    addressDetails: ""
+  });
 
   const suggestedSlug = useMemo(
     () => createSlug(profile.username ?? profile.full_name),
@@ -53,6 +60,17 @@ export const CreatorAccessPanel = ({
   };
 
   const handleVerify = async () => {
+    if (
+      !verificationForm.fullName.trim() ||
+      !verificationForm.instagramLink.trim() ||
+      !verificationForm.identityIdNumber.trim() ||
+      !verificationForm.description.trim() ||
+      !verificationForm.addressDetails.trim()
+    ) {
+      setError("Complete the Original Badge form before payment.");
+      return;
+    }
+
     setStartingVerification(true);
     setError(null);
     setMessage(null);
@@ -65,7 +83,7 @@ export const CreatorAccessPanel = ({
       return;
     }
 
-    const orderResult = await createArtistVerificationOrder();
+    const orderResult = await createArtistVerificationOrder(verificationForm);
 
     if (orderResult.error || !orderResult.data) {
       setStartingVerification(false);
@@ -192,8 +210,84 @@ export const CreatorAccessPanel = ({
           <>
             <div className="creator-access-card__meta">
               <strong>One-time fee</strong>
-              <span>Test-mode Razorpay checkout marks this account verified after payment.</span>
+              <span>Submit your identity form, then complete the Razorpay payment.</span>
             </div>
+            <form className="dashboard-form" onSubmit={(event) => event.preventDefault()}>
+              <label>
+                Full name
+                <input
+                  onChange={(event) =>
+                    setVerificationForm((current) => ({
+                      ...current,
+                      fullName: event.target.value
+                    }))
+                  }
+                  placeholder="Your legal or identity name"
+                  type="text"
+                  value={verificationForm.fullName}
+                />
+              </label>
+
+              <label>
+                Instagram link
+                <input
+                  onChange={(event) =>
+                    setVerificationForm((current) => ({
+                      ...current,
+                      instagramLink: event.target.value
+                    }))
+                  }
+                  placeholder="https://instagram.com/yourhandle"
+                  type="url"
+                  value={verificationForm.instagramLink}
+                />
+              </label>
+
+              <label>
+                Government or identity ID number
+                <input
+                  onChange={(event) =>
+                    setVerificationForm((current) => ({
+                      ...current,
+                      identityIdNumber: event.target.value
+                    }))
+                  }
+                  placeholder="Identity number"
+                  type="text"
+                  value={verificationForm.identityIdNumber}
+                />
+              </label>
+
+              <label className="dashboard-form__full">
+                Short description
+                <textarea
+                  onChange={(event) =>
+                    setVerificationForm((current) => ({
+                      ...current,
+                      description: event.target.value
+                    }))
+                  }
+                  placeholder="Tell us who you are and what kind of artist you are."
+                  rows={4}
+                  value={verificationForm.description}
+                />
+              </label>
+
+              <label className="dashboard-form__full">
+                Address details
+                <textarea
+                  onChange={(event) =>
+                    setVerificationForm((current) => ({
+                      ...current,
+                      addressDetails: event.target.value
+                    }))
+                  }
+                  placeholder="Your current address"
+                  rows={3}
+                  value={verificationForm.addressDetails}
+                />
+              </label>
+            </form>
             <button
               className="solid-button"
               disabled={isStartingVerification}

@@ -311,7 +311,13 @@ export const convertProfileToCreator = async (desiredSlug?: string | null) => {
   };
 };
 
-export const createArtistVerificationOrder = async () => {
+export const createArtistVerificationOrder = async (input: {
+  fullName: string;
+  instagramLink: string;
+  identityIdNumber: string;
+  description: string;
+  addressDetails: string;
+}) => {
   const supabase = getSupabaseClient();
 
   if (!supabase) {
@@ -319,7 +325,7 @@ export const createArtistVerificationOrder = async () => {
   }
 
   const { data, error } = await supabase.functions.invoke("create-artist-verification-order", {
-    body: {}
+    body: input
   });
 
   return {

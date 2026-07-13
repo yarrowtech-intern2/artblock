@@ -285,6 +285,16 @@
   color: var(--copy-muted);
 }
 
+[data-theme="dark"] .auth-password-field__toggle,
+[data-theme="amoled"] .auth-password-field__toggle {
+  color: #d8d9ff;
+}
+
+[data-theme="dark"] .auth-route-modal .auth-password-field__toggle,
+[data-theme="amoled"] .auth-route-modal .auth-password-field__toggle {
+  color: var(--accent-strong);
+}
+
 [data-theme="dark"] .auth-message--info,
 [data-theme="amoled"] .auth-message--info {
   background: rgba(129, 140, 248, 0.1);
